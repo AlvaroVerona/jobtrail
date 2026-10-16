@@ -31,3 +31,15 @@ jobs:
             sleep 1
           done
           echo "server did not come up:" && cat server.log && exit 1
+
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - run: swift --version
+      - name: Test the macOS app's logic
+        working-directory: macos
+        run: swift test
+      - name: Build the app (release)
+        working-directory: macos
+        run: swift build -c release

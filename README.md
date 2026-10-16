@@ -83,13 +83,15 @@ Environment variables or a `.env` file (see `.env.example`).
 | `JOBTRAIL_OLLAMA_NUM_CTX` / `_TIMEOUT` | `8192` / `300` | context tokens / seconds |
 | `JOBTRAIL_STALE_AFTER_DAYS` | `21` | when an application counts as waiting too long |
 | `JOBTRAIL_MIN_SAMPLE` | `20` | applications needed before a group is compared |
+| `JOBTRAIL_PARENT_PID` | unset | set by the macOS app: the server exits when that process does |
 
 ## Development
 
 ```bash
 uv sync
 uv run ruff check . && uv run ruff format --check .
-uv run pytest                          # 307 tests, none of them calls a real model
+uv run pytest                          # 312 tests, none of them calls a real model
+(cd macos && swift test)               # 26 tests for the macOS app (macOS only)
 uv run python scripts/compare_models.py qwen3:8b llama3.1   # live model comparison (needs Ollama)
 uv run python scripts/screenshots.py   # regenerate docs/images (needs Ollama and Chrome)
 ```

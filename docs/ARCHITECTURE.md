@@ -67,6 +67,10 @@ jobtrail listens on localhost, but a browser can still be pointed at it by any p
 * Guards were verified by disabling each in turn and confirming a test fails. That exposed one test that stayed green (it did not isolate the follow-up log), which was rewritten.
 * `scripts/compare_models.py` and `scripts/screenshots.py` run against a real Ollama and are not part of the suite.
 
+## The macOS app
+
+`macos/` is a Swift package that builds `jobtrail.app`: a SwiftUI window around a `WKWebView` that shows the same server-rendered UI. It does not talk to the server through any special API; it starts `.venv/bin/jobtrail serve` on a free port, waits for `/health`, and loads the page. The server watches the app's process id (`JOBTRAIL_PARENT_PID`) and exits if it disappears, so a crashed app cannot leave a server behind. The logic that carries risk (project resolution, environment, URL policy, server lifecycle) is separated from the views and unit-tested; see [`macos/README.md`](../macos/README.md).
+
 ## Extending
 
 * **Another model server:** implement `LLMClient` (`generate`, `check`, `model`) and pass it as `create_app(llm_factory=...)`.

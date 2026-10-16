@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from jobtrail.demo import DEMO_DB_FILE, load_demo
 from jobtrail.ingestion.csv_import import ImportReport, import_csv
 from jobtrail.reporting import format_report
 from jobtrail.services.analytics import AnalyticsService
+from jobtrail.watchdog import parent_pid_from_env, watch_parent
 
 
 def _serve(_: argparse.Namespace) -> int:
@@ -18,6 +20,9 @@ def _serve(_: argparse.Namespace) -> int:
 
     settings = get_settings()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
+    if (parent := parent_pid_from_env()) is not None:
+        # Started by the macOS app: do not outlive it.
+        watch_parent(parent, lambda: os._exit(0))
     uvicorn.run("jobtrail.main:create_app", factory=True, host=settings.host, port=settings.port)
     return 0
 

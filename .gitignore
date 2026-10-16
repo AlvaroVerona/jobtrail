@@ -15,3 +15,8 @@ build/
 
 # macOS
 .DS_Store
+
+# macOS app build output
+macos/.build/
+macos/.swiftpm/
+macos/Resources/AppIcon.iconset/

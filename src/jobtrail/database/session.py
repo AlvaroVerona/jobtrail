@@ -1,5 +1,6 @@
 from sqlalchemy import Engine, create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from jobtrail.database.models import Base, Channel
 
@@ -7,6 +8,9 @@ DEFAULT_CHANNELS = ("Easy Apply", "Company website", "Referral", "Recruiter", "D
 
 
 def make_engine(url: str) -> Engine:
+    if url in ("sqlite://", "sqlite:///:memory:"):
+        # One shared connection, usable from the web server's worker threads.
+        return create_engine(url, poolclass=StaticPool, connect_args={"check_same_thread": False})
     return create_engine(url)
 
 

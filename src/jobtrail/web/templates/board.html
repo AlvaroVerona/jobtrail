@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, move_form %}
+{% block title %}Board{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Board</h1>
+  <form method="get" action="/board" class="inline-filter">
+    <label>Track
+      <select name="track" onchange="this.form.requestSubmit()">
+        <option value="">All</option>
+        {% for name in track_names %}<option value="{{ name }}"{% if name == selected_track %} selected{% endif %}>{{ name }}</option>{% endfor %}
+      </select>
+    </label>
+    <noscript><button type="submit">Filter</button></noscript>
+  </form>
+</div>
+
+<div class="board">
+  {% for status, items in columns %}
+  <section class="column">
+    <h2>{{ status|status_label }} <span class="count">{{ items|length }}</span></h2>
+    {% for app in items %}
+    <article class="card">
+      <a class="card-title" href="/applications/{{ app.id }}">{{ app.company.name }}</a>
+      <div class="muted">{{ app.role or "(no role yet)" }}</div>
+      <div class="meta">
+        {% if app.track %}<span class="chip">{{ app.track.name }}</span>{% endif %}
+        {% if app.channel %}<span class="chip">{{ app.channel.name }}</span>{% endif %}
+        {% set d = app.events[-1].at|days_ago %}
+        <span class="muted">{{ d }}d in this stage</span>
+      </div>
+      {{ move_form(app, "/board" ~ ("?track=" ~ selected_track|urlencode if selected_track else "")) }}
+    </article>
+    {% else %}
+    <p class="empty">Nothing here</p>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</div>
+
+<h2 class="section">Closed</h2>
+{% for status, items in closed %}
+<details class="closed">
+  <summary>{{ status|status_label }} <span class="count">{{ items|length }}</span></summary>
+  <ul class="plain">
+    {% for app in items %}
+    <li><a href="/applications/{{ app.id }}">{{ app.company.name }}</a> <span class="muted">{{ app.role or "" }}</span></li>
+    {% else %}<li class="muted">Nothing here</li>{% endfor %}
+  </ul>
+</details>
+{% endfor %}
+{% endblock %}

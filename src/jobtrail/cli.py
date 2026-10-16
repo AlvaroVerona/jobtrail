@@ -18,7 +18,7 @@ def _serve(_: argparse.Namespace) -> int:
 
     settings = get_settings()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
-    uvicorn.run("jobtrail.main:app", host=settings.host, port=settings.port)
+    uvicorn.run("jobtrail.main:create_app", factory=True, host=settings.host, port=settings.port)
     return 0
 
 

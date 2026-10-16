@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}jobtrail{% endblock %} · jobtrail</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body hx-boost="true">
+  <header class="top">
+    <a class="brand" href="/board">jobtrail</a>
+    <nav>
+      {% for href, label in [("/board", "Board"), ("/applications", "Applications"), ("/followups", "Follow-ups"), ("/analytics", "Analytics"), ("/settings", "Settings")] %}
+        <a href="{{ href }}"{% if path.startswith(href) %} aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <a class="btn primary" href="/applications/new">+ New</a>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+  <script>
+    // htmx ignores 4xx responses by default; our forms answer 400 with the page plus an error.
+    document.body.addEventListener("htmx:beforeSwap", function (event) {
+      if (event.detail.xhr.status === 400) { event.detail.shouldSwap = true; event.detail.isError = false; }
+    });
+  </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from jobtrail.database.models import (
     Application,
@@ -20,6 +20,10 @@ _EDITABLE_FIELDS = frozenset(
 
 class ApplicationNotFound(LookupError):
     pass
+
+
+class OptionError(ValueError):
+    """A channel or track could not be renamed or deleted."""
 
 
 def _require_aware(value: datetime | None, name: str) -> datetime | None:
@@ -117,8 +121,18 @@ class TrackerService:
         track: str | None = None,
         channel: str | None = None,
         company: str | None = None,
+        search: str | None = None,
     ) -> list[Application]:
-        query = select(Application).join(Company)
+        query = (
+            select(Application)
+            .join(Company)
+            .options(
+                selectinload(Application.company),
+                selectinload(Application.channel),
+                selectinload(Application.track),
+                selectinload(Application.events),
+            )
+        )
         if status is not None:
             query = query.where(Application.status == status)
         if track is not None:
@@ -131,6 +145,12 @@ class TrackerService:
             )
         if company is not None:
             query = query.where(func.lower(Company.name) == company.lower())
+        if search:
+            needle = search.strip().lower()
+            query = query.where(
+                func.lower(Company.name).contains(needle, autoescape=True)
+                | func.lower(func.coalesce(Application.role, "")).contains(needle, autoescape=True)
+            )
         return list(self.session.scalars(query.order_by(Application.id)))
 
     def update_application(self, application: Application, **fields) -> Application:
@@ -184,4 +204,38 @@ class TrackerService:
 
     def delete_application(self, application: Application) -> None:
         self.session.delete(application)
+        self.session.flush()
+
+    # -- channel / track management ------------------------------------------------------
+
+    def list_options(self, model) -> list[tuple[object, int]]:
+        """(option, number of applications using it), alphabetical."""
+        column = Application.channel_id if model is Channel else Application.track_id
+        counts = dict(self.session.execute(select(column, func.count()).group_by(column)).all())
+        options = self.session.scalars(select(model).order_by(func.lower(model.name)))
+        return [(option, counts.get(option.id, 0)) for option in options]
+
+    def rename_option(self, model, option_id: int, new_name: str) -> None:
+        new_name = new_name.strip()
+        if not new_name:
+            raise OptionError("Name cannot be empty")
+        option = self.session.get(model, option_id)
+        if option is None:
+            raise OptionError("Not found")
+        clash = self.session.scalar(
+            select(model).where(func.lower(model.name) == new_name.lower(), model.id != option_id)
+        )
+        if clash is not None:
+            raise OptionError(f"'{clash.name}' already exists")
+        option.name = new_name
+        self.session.flush()
+
+    def delete_option(self, model, option_id: int) -> None:
+        option = self.session.get(model, option_id)
+        if option is None:
+            raise OptionError("Not found")
+        used = dict((o.id, n) for o, n in self.list_options(model)).get(option_id, 0)
+        if used:
+            raise OptionError(f"'{option.name}' is used by {used} application(s)")
+        self.session.delete(option)
         self.session.flush()

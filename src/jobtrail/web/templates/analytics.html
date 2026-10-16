@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_macros.html" import funnel_table %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Analytics</h1></div>
+<p class="muted">
+  Stages count what an application <em>ever</em> reached, out of applications actually sent. Percentages
+  show the 95% interval in brackets: with few applications it is wide, and a group under
+  {{ min_sample }} is marked <span class="flag">too few to compare</span>.
+</p>
+
+<h2>Overall</h2>
+{{ funnel_table([report.overall], min_sample) }}
+
+<h2>By channel</h2>
+{{ funnel_table(report.by_channel, min_sample, "Channel") }}
+
+<h2>By track</h2>
+{{ funnel_table(report.by_track, min_sample, "Track") }}
+
+<h2>Applications sent per week</h2>
+<ul class="bars">
+  {% for monday, count in report.weekly_applications %}
+  <li><span class="muted">{{ monday.strftime("%d %b") }}</span>
+      <span class="bar" style="width: {{ (count / peak * 100)|round|int if peak else 0 }}%"></span>
+      <span class="num">{{ count }}</span></li>
+  {% endfor %}
+</ul>
+<p class="muted">{{ report.stale|length }} application(s) waiting too long: see <a href="/followups">Follow-ups</a>.</p>
+{% endblock %}

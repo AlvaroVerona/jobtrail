@@ -2,7 +2,7 @@
 
 A local-first job search tracker: log applications with a reliable status history, see which channel, track and CV version actually gets responses, and (optionally) get help from a local LLM. No accounts, no cloud, no paid APIs.
 
-> **Status: early development (milestone M3 done).** Data model, status lifecycle, tracker, CSV import, demo data and funnel analytics are in place and tested; the web UI is next. See [`docs/DESIGN.md`](docs/DESIGN.md) for scope and milestones.
+> **Status: early development (milestone M4 done).** Tracker, CSV import, demo data, funnel analytics and the web UI work end to end. LLM features (fit scoring, CV advice, message drafts) are next. See [`docs/DESIGN.md`](docs/DESIGN.md) for scope and milestones.
 
 ## Why
 
@@ -16,8 +16,20 @@ Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/AlvaroVerona/jobtrail.git
 cd jobtrail
 uv sync
-uv run jobtrail serve        # http://127.0.0.1:8000/health
+uv run jobtrail serve        # http://127.0.0.1:8000
 ```
+
+### The web app
+
+`uv run jobtrail serve` opens a local app at http://127.0.0.1:8000:
+
+- **Board**: one column per status, with a quick "move to" on every card; filter by track.
+- **Applications**: searchable, filterable table. Click through for the full history, to edit details, or to change status with a date and a note.
+- **Follow-ups**: applications waiting longer than `JOBTRAIL_STALE_AFTER_DAYS`, with one-click next steps.
+- **Analytics**: the funnel tables described below.
+- **Settings**: manage your own channels and tracks.
+
+It works as plain HTML forms and is enhanced with [htmx](https://htmx.org) (vendored in `web/static/`, so nothing loads from a CDN). It only accepts requests addressed to localhost and refuses state changes that come from another site, so a web page you visit cannot silently edit your data.
 
 ### Try it with demo data
 

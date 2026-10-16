@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}New application{% endblock %}
+{% block content %}
+<div class="page-head"><h1>New application</h1></div>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="/applications" class="form card-form">
+  <label>Company <input name="company" value="{{ values.company or '' }}" required autofocus></label>
+  <label>Role <input name="role" value="{{ values.role or '' }}"></label>
+  <label>Status
+    <select name="status">
+      {% for s in creatable %}<option value="{{ s.value }}"{% if values.status == s.value %} selected{% endif %}>{{ s|status_label }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Applied on <input type="date" name="applied_date" value="{{ values.applied_date or '' }}"><small class="muted">Only used when status is Applied; empty means today.</small></label>
+  <label>Channel <input name="channel" list="channels" value="{{ values.channel or '' }}"></label>
+  <label>Track <input name="track" list="tracks" value="{{ values.track or '' }}"></label>
+  <label>Expected salary <input name="salary_expected" inputmode="numeric" value="{{ values.salary_expected or '' }}"></label>
+  <label>Asked salary <input name="salary_asked" inputmode="numeric" value="{{ values.salary_asked or '' }}"></label>
+  <label class="wide">Notes <textarea name="notes" rows="3">{{ values.notes or '' }}</textarea></label>
+  <datalist id="channels">{% for n in channel_names %}<option value="{{ n }}">{% endfor %}</datalist>
+  <datalist id="tracks">{% for n in track_names %}<option value="{{ n }}">{% endfor %}</datalist>
+  <div class="actions wide"><button class="primary" type="submit">Create</button> <a class="btn" href="/applications">Cancel</a></div>
+</form>
+{% endblock %}

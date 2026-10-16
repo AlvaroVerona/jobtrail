@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Settings</h1></div>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+<div class="two-col">
+  {% for kind, title, items in [("channels", "Channels", channels), ("tracks", "Tracks", tracks)] %}
+  <section>
+    <h2>{{ title }}</h2>
+    <ul class="plain options">
+      {% for option, used in items %}
+      <li>
+        <form method="post" action="/settings/{{ kind }}/{{ option.id }}/rename" class="inline">
+          <input name="name" value="{{ option.name }}" aria-label="Name">
+          <button type="submit">Rename</button>
+        </form>
+        <span class="muted">{{ used }} used</span>
+        {% if not used %}
+        <form method="post" action="/settings/{{ kind }}/{{ option.id }}/delete" class="inline"><button type="submit" class="danger">Delete</button></form>
+        {% endif %}
+      </li>
+      {% else %}<li class="muted">None yet. Tracks are created here or while adding an application.</li>{% endfor %}
+    </ul>
+    <form method="post" action="/settings/{{ kind }}" class="inline">
+      <input name="name" placeholder="New {{ kind[:-1] }}" aria-label="New {{ kind[:-1] }}">
+      <button type="submit" class="primary">Add</button>
+    </form>
+  </section>
+  {% endfor %}
+</div>
+
+<h2>Configuration</h2>
+<p class="muted">Set these with <code>JOBTRAIL_*</code> environment variables or a <code>.env</code> file, then restart.</p>
+<table class="kv">
+  <tr><th>Database</th><td><code>{{ settings.data_dir }}/{{ settings.db_file }}</code></td></tr>
+  <tr><th>Stale after</th><td>{{ settings.stale_after_days }} days</td></tr>
+  <tr><th>Minimum sample</th><td>{{ settings.min_sample }} applications</td></tr>
+</table>
+{% endblock %}

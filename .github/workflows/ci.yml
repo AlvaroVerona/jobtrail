@@ -24,7 +24,10 @@ jobs:
           SERVER_PID=$!
           trap 'kill $SERVER_PID' EXIT
           for i in $(seq 1 20); do
-            if curl -fs http://127.0.0.1:8000/health; then exit 0; fi
+            if curl -fs http://127.0.0.1:8000/health; then
+              curl -fs http://127.0.0.1:8000/board > /dev/null && exit 0
+              echo "health is up but /board failed" && exit 1
+            fi
             sleep 1
           done
           echo "server did not come up:" && cat server.log && exit 1

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge %}
+{% block title %}Applications{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Applications <span class="count">{{ rows|length }}</span></h1></div>
+
+<form method="get" action="/applications" class="filters">
+  <input type="search" name="q" value="{{ filters.q }}" placeholder="Search company or role">
+  <select name="status" aria-label="Status">
+    <option value="">Any status</option>
+    {% for s in STATUS_ORDER %}<option value="{{ s.value }}"{% if filters.status == s.value %} selected{% endif %}>{{ s|status_label }}</option>{% endfor %}
+  </select>
+  <select name="track" aria-label="Track">
+    <option value="">Any track</option>
+    {% for n in track_names %}<option{% if filters.track == n %} selected{% endif %}>{{ n }}</option>{% endfor %}
+  </select>
+  <select name="channel" aria-label="Channel">
+    <option value="">Any channel</option>
+    {% for n in channel_names %}<option{% if filters.channel == n %} selected{% endif %}>{{ n }}</option>{% endfor %}
+  </select>
+  <button type="submit">Filter</button>
+  <a href="/applications" class="btn">Reset</a>
+</form>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Company</th><th>Role</th><th>Status</th><th>Applied</th><th>Channel</th><th>Track</th><th class="num">Updated</th></tr></thead>
+  <tbody>
+  {% for app in rows %}
+    <tr>
+      <td><a href="/applications/{{ app.id }}">{{ app.company.name }}</a></td>
+      <td>{{ app.role or "" }}</td>
+      <td>{{ badge(app.status) }}</td>
+      <td>{{ app.applied_at|fmt_date }}</td>
+      <td>{{ app.channel.name if app.channel else "" }}</td>
+      <td>{{ app.track.name if app.track else "" }}</td>
+      <td class="num muted">{{ app.events[-1].at|days_ago }}d ago</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7" class="muted">No applications match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

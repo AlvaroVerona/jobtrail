@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge %}
+{% block title %}{{ app.company.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ app.company.name }}</h1>
+    <div class="muted">{{ app.role or "(no role yet)" }} &middot; {{ badge(app.status) }}</div>
+  </div>
+  <form method="post" action="/applications/{{ app.id }}/delete" hx-boost="false"
+        onsubmit="return confirm('Delete this application and its whole history?')">
+    <button type="submit" class="danger">Delete</button>
+  </form>
+</div>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+<div class="two-col">
+  <section>
+    <h2>Details</h2>
+    <form method="post" action="/applications/{{ app.id }}/edit" class="form card-form">
+      <label>Role <input name="role" value="{{ app.role or '' }}"></label>
+      <label>Applied on <input type="date" name="applied_date" value="{{ app.applied_at.strftime('%Y-%m-%d') if app.applied_at else '' }}"></label>
+      <label>Channel <input name="channel" list="channels" value="{{ app.channel.name if app.channel else '' }}"></label>
+      <label>Track <input name="track" list="tracks" value="{{ app.track.name if app.track else '' }}"></label>
+      <label>Expected salary <input name="salary_expected" inputmode="numeric" value="{{ app.salary_expected if app.salary_expected is not none else '' }}"></label>
+      <label>Asked salary <input name="salary_asked" inputmode="numeric" value="{{ app.salary_asked if app.salary_asked is not none else '' }}"></label>
+      <label class="wide">Notes <textarea name="notes" rows="4">{{ app.notes or '' }}</textarea></label>
+      <datalist id="channels">{% for n in channel_names %}<option value="{{ n }}">{% endfor %}</datalist>
+      <datalist id="tracks">{% for n in track_names %}<option value="{{ n }}">{% endfor %}</datalist>
+      <div class="actions wide"><button type="submit" class="primary">Save details</button></div>
+    </form>
+  </section>
+
+  <section>
+    <h2>Status</h2>
+    {% set targets = allowed_targets(app.status) %}
+    {% if targets %}
+    <form method="post" action="/applications/{{ app.id }}/status" class="form card-form">
+      <label>Move to
+        <select name="to_status">{% for t in targets %}<option value="{{ t.value }}">{{ t|status_label }}</option>{% endfor %}</select>
+      </label>
+      <label>Date <input type="date" name="date"><small class="muted">Empty means now.</small></label>
+      <label class="wide">Note <input name="note" placeholder="Optional"></label>
+      <div class="actions wide"><button type="submit" class="primary">Update status</button></div>
+    </form>
+    {% else %}
+    <p class="muted">This is a final status, so there are no further moves.</p>
+    {% endif %}
+
+    <h2>History</h2>
+    <ol class="timeline">
+      {% for e in history|reverse %}
+      <li>
+        <strong>{{ e.to_status|status_label }}</strong>
+        <span class="muted">{{ e.at|fmt_date }}{% if e.from_status %} &middot; from {{ e.from_status|status_label|lower }}{% endif %}</span>
+        {% if e.note %}<div>{{ e.note }}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+</div>
+{% endblock %}

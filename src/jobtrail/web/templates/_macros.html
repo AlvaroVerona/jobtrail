@@ -1,0 +1,46 @@
+{% macro badge(status) %}<span class="badge s-{{ status.value }}">{{ status|status_label }}</span>{% endmacro %}
+
+{% macro move_form(app, next="") %}
+  {% set targets = allowed_targets(app.status) %}
+  {% if targets %}
+  <form method="post" action="/applications/{{ app.id }}/status" class="move">
+    <input type="hidden" name="next" value="{{ next }}">
+    <select name="to_status" aria-label="Move to">
+      {% for t in targets %}<option value="{{ t.value }}">{{ t|status_label }}</option>{% endfor %}
+    </select>
+    <button type="submit">Move</button>
+  </form>
+  {% endif %}
+{% endmacro %}
+
+{% macro rate_cell(count, rate) %}
+  {{ count }} <small class="muted">{{ rate.value|pct }}{% if rate.n %} ({{ rate.low|pct }}&ndash;{{ rate.high|pct }}){% endif %}</small>
+{% endmacro %}
+
+{% macro funnel_table(rows, min_sample, label_header="") %}
+<div class="table-wrap">
+<table>
+  <thead><tr>
+    <th>{{ label_header }}</th><th class="num">Applied</th><th class="num">Responded</th>
+    <th class="num">Advanced</th><th class="num">Interview</th><th class="num">Offer</th>
+    <th class="num">Median reply</th><th></th>
+  </tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td>{{ row.label }}</td>
+      <td class="num">{{ row.applied }}</td>
+      <td class="num">{{ rate_cell(row.responded, row.response_rate) }}</td>
+      <td class="num">{{ rate_cell(row.advanced, row.advance_rate) }}</td>
+      <td class="num">{{ row.interviewing }}</td>
+      <td class="num">{{ row.offers }}</td>
+      <td class="num">{% if row.median_days_to_response is not none %}{{ row.median_days_to_response|round|int }}d <small class="muted">n={{ row.response_time_n }}</small>{% else %}-{% endif %}</td>
+      <td>{% if not row.conclusive %}<span class="flag" title="Fewer than {{ min_sample }} applications">too few to compare</span>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8" class="muted">No applications yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endmacro %}

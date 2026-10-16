@@ -1,7 +1,8 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import (
     JSON,
+    Date,
     DateTime,
     Enum,
     ForeignKey,
@@ -55,6 +56,7 @@ class Company(Base):
     notes: Mapped[str | None] = mapped_column(Text)
 
     applications: Mapped[list["Application"]] = relationship(back_populates="company")
+    contacts: Mapped[list["Contact"]] = relationship(back_populates="company")
 
 
 # One company per name, ignoring case ("ING" and "ing" are the same company).
@@ -108,6 +110,8 @@ class Application(Base):
         cascade="all, delete-orphan",
         order_by="Followup.sent_at, Followup.id",
     )
+    interactions: Mapped[list["Interaction"]] = relationship(back_populates="application")
+    reminders: Mapped[list["Reminder"]] = relationship(back_populates="application")
 
 
 class StatusEvent(Base):
@@ -140,6 +144,69 @@ class Followup(Base):
     note: Mapped[str | None] = mapped_column(Text)
 
     application: Mapped[Application] = relationship(back_populates="followups")
+
+
+class Contact(Base):
+    """A person at a company you are in touch with (or want to be)."""
+
+    __tablename__ = "contact"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("company.id"))
+    name: Mapped[str] = mapped_column(String(200))
+    job_title: Mapped[str | None] = mapped_column(String(200))
+    profile_url: Mapped[str | None] = mapped_column(String(1000))
+    email: Mapped[str | None] = mapped_column(String(320))
+    source: Mapped[str] = mapped_column(String(20), default="other")
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    company: Mapped[Company] = relationship(back_populates="contacts")
+    interactions: Mapped[list["Interaction"]] = relationship(
+        back_populates="contact",
+        cascade="all, delete-orphan",
+        order_by="Interaction.at, Interaction.id",
+    )
+    reminders: Mapped[list["Reminder"]] = relationship(
+        back_populates="contact", cascade="all, delete-orphan"
+    )
+
+
+class Interaction(Base):
+    """One exchange with a contact: a message sent or received, a call, a meeting, a note.
+    A reply is an inbound message, which is how the app knows someone answered."""
+
+    __tablename__ = "interaction"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    contact_id: Mapped[int] = mapped_column(ForeignKey("contact.id"))
+    application_id: Mapped[int | None] = mapped_column(ForeignKey("application.id"))
+    followup_id: Mapped[int | None] = mapped_column(ForeignKey("followup.id"))
+    kind: Mapped[str] = mapped_column(String(10), default="message")
+    direction: Mapped[str | None] = mapped_column(String(10))
+    channel: Mapped[str] = mapped_column(String(20), default="email")
+    summary: Mapped[str | None] = mapped_column(Text)
+    at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    contact: Mapped[Contact] = relationship(back_populates="interactions")
+    application: Mapped["Application | None"] = relationship(back_populates="interactions")
+
+
+class Reminder(Base):
+    """'Look at this again on that day.' Attached to an application, a contact, or both."""
+
+    __tablename__ = "reminder"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int | None] = mapped_column(ForeignKey("application.id"))
+    contact_id: Mapped[int | None] = mapped_column(ForeignKey("contact.id"))
+    due_on: Mapped[date] = mapped_column(Date)
+    note: Mapped[str | None] = mapped_column(String(300))
+    done_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    application: Mapped["Application | None"] = relationship(back_populates="reminders")
+    contact: Mapped[Contact | None] = relationship(back_populates="reminders")
 
 
 class CVVersion(Base):

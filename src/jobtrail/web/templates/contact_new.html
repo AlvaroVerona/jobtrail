@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Add contact{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Add a contact</h1></div>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="/contacts" class="form card-form">
+  <label>Company <input name="company" list="companies" value="{{ values.company or '' }}" required></label>
+  <label>Name <input name="name" value="{{ values.name or '' }}" required autofocus></label>
+  <label>Job title <input name="job_title" list="titles" value="{{ values.job_title or '' }}"></label>
+  <label>Found through
+    <select name="source">
+      {% for value, label in sources %}<option value="{{ value }}"{% if values.source == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Profile link <input name="profile_url" type="url" placeholder="https://www.linkedin.com/in/..." value="{{ values.profile_url or '' }}"></label>
+  <label>Email <input name="email" type="email" value="{{ values.email or '' }}"></label>
+  <label class="wide">Notes <textarea name="notes" rows="3">{{ values.notes or '' }}</textarea></label>
+  <input type="hidden" name="application_id" value="{{ values.application_id or '' }}">
+  <datalist id="companies">{% for n in company_names %}<option value="{{ n }}">{% endfor %}</datalist>
+  <datalist id="titles">{% for t in title_suggestions %}<option value="{{ t }}">{% endfor %}</datalist>
+  <p class="muted small wide">You are saving a person's details on your own computer, to keep track of your own job search. Only add what you need, and delete it when you no longer do.</p>
+  <div class="actions wide"><button class="primary" type="submit">Save contact</button> <a class="btn" href="/contacts">Cancel</a></div>
+</form>
+{% endblock %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import badge %}
+{% from "_macros.html" import badge, state_chip, reminder_list, reminder_form %}
 {% block title %}{{ app.company.name }}{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -75,6 +75,12 @@
       <input type="hidden" name="kind" value="{{ draft.kind }}">
       {% if draft.warnings %}<div class="wide">{% for w in draft.warnings %}<p class="error" role="alert">{{ w }}</p>{% endfor %}</div>{% endif %}
       <label class="wide">Subject <input name="subject" value="{{ draft.subject or '' }}"></label>
+      <label>Sent to
+        <select name="contact_id"><option value="">(no one in particular)</option>{% for row in people %}<option value="{{ row.contact.id }}">{{ row.contact.name }}</option>{% endfor %}</select>
+      </label>
+      <label>Through
+        <select name="channel">{% for value, label in contact_channels %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+      </label>
       <label class="wide">Message (edit it before you send) <textarea name="text" rows="9">{{ draft.body }}</textarea></label>
       <p class="muted small wide">jobtrail does not send anything. Copy the text into your email or LinkedIn, then record it here so the follow-up clock restarts.</p>
       <div class="actions wide"><button type="submit" class="primary">I sent it: record it</button></div>
@@ -102,12 +108,31 @@
     </form>
     <form method="post" action="/applications/{{ app.id }}/followup" class="inline">
       <select name="kind" aria-label="Kind">{% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+      <select name="contact_id" aria-label="Sent to"><option value="">(no contact)</option>{% for row in people %}<option value="{{ row.contact.id }}">{{ row.contact.name }}</option>{% endfor %}</select>
+      <select name="channel" aria-label="Through">{% for value, label in contact_channels %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
       <input name="note" placeholder="Note (optional)" aria-label="Note">
       <button type="submit">Log one I already sent</button>
     </form>
     {% else %}
     <p class="muted">No message fits an application in this status.</p>
     {% endif %}
+
+    <h2 id="people">People</h2>
+    {% for row in people %}
+    <div><a href="/contacts/{{ row.contact.id }}">{{ row.contact.name }}</a>
+      <span class="muted">{{ row.contact.job_title or "" }}</span> {{ state_chip(row.state) }}</div>
+    {% else %}<p class="muted">Nobody saved at {{ app.company.name }} yet.</p>{% endfor %}
+    <p><a class="btn" href="/contacts/new?company={{ app.company.name|urlencode }}&amp;application_id={{ app.id }}">Add a contact</a></p>
+    <details>
+      <summary class="muted">Find someone to write to</summary>
+      <p class="muted small">These open a search in a new tab. jobtrail does not run the search or read the results: you look, then add the person yourself.</p>
+      <ul>{% for l in search_links %}<li><a href="{{ l.url }}" target="_blank" rel="noopener noreferrer">{{ l.label }}</a></li>{% endfor %}</ul>
+    </details>
+
+    <h2>Reminders</h2>
+    {{ reminder_list(reminders, "/applications/" ~ app.id, today) }}
+    {% if not reminders %}<p class="muted">None.</p>{% endif %}
+    {{ reminder_form(app.id, none, "/applications/" ~ app.id) }}
 
     <h2>Postings</h2>
     {% for p in app.postings %}

@@ -11,7 +11,7 @@
   <header class="top">
     <a class="brand" href="/board">jobtrail</a>
     <nav>
-      {% for href, label in [("/board", "Board"), ("/applications", "Applications"), ("/postings", "Postings"), ("/cv", "CV"), ("/followups", "Follow-ups"), ("/analytics", "Analytics"), ("/settings", "Settings")] %}
+      {% for href, label in [("/board", "Board"), ("/applications", "Applications"), ("/contacts", "Contacts"), ("/postings", "Postings"), ("/cv", "CV"), ("/followups", "Follow-ups"), ("/analytics", "Analytics"), ("/settings", "Settings")] %}
         <a href="{{ href }}"{% if path.startswith(href) %} aria-current="page"{% endif %}>{{ label }}</a>
       {% endfor %}
     </nav>

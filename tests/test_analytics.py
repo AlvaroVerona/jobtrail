@@ -294,3 +294,22 @@ def test_demo_always_has_recent_activity_and_something_overdue(session):
     weeks = service.weekly_applications(now=datetime(2030, 3, 15, tzinfo=UTC), weeks=8)
     assert sum(count for _, count in weeks) >= 15
     assert len(service.stale_applications(now=datetime(2030, 3, 15, tzinfo=UTC))) >= 3
+
+
+def test_demo_includes_people_replies_and_reminders(session):
+    from jobtrail.services.contacts import ContactService, ReminderService
+    from jobtrail.services.outreach_stats import OutreachStatsService
+
+    load_demo(session, today=date(2030, 3, 15))
+    stats = OutreachStatsService(session).report(now=datetime(2030, 3, 15, 12, tzinfo=UTC))
+    assert stats.people >= 10 and stats.responded >= 4 and stats.awaiting >= 3
+    by_source = {r.label: r for r in stats.by_source}
+    assert by_source["referral"].responded == by_source["referral"].contacted  # referrals answered
+
+    waiting = ContactService(session).list_contacts(
+        awaiting_only=True, now=datetime(2030, 3, 15, 12, tzinfo=UTC)
+    )
+    assert waiting and all(row.state.days_waiting >= 0 for row in waiting)
+    today_ = date(2030, 3, 15)
+    assert ReminderService(session).due(today_)  # something to act on today or overdue
+    assert ReminderService(session).upcoming(today_, days=7)

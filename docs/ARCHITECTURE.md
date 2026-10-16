@@ -30,10 +30,13 @@ Rules that keep it testable: `domain/` imports nothing from the other layers; `s
 | `domain/followup.py` | Kinds of message (follow-up, thank-you, recruiter intro) and the statuses each one fits. |
 | `domain/text_match.py` | `quote_in_text` (whole-word, normalised), `unsupported_numbers`, `unsupported_terms`: the deterministic checks every model claim goes through. |
 | `domain/scoring.py` | The fit score formula. |
-| `database/models.py` | `Company`, `Application`, `StatusEvent`, `Followup`, `Channel`, `Track`, `CVVersion`, `Posting`, `FitAnalysis`. |
+| `domain/outreach.py` | `thread_state`: from a contact's history, did they answer and are you still waiting? One place for the rule. |
+| `database/models.py` | `Company`, `Application`, `StatusEvent`, `Followup`, `Channel`, `Track`, `CVVersion`, `Posting`, `FitAnalysis`, `Contact`, `Interaction`, `Reminder`. |
 | `services/tracker.py` | Create/edit/delete applications, change status (validated, ordered, recorded as events), log messages, manage channels and tracks. |
 | `services/analytics.py` | Funnel, Wilson intervals, median time to reply, stale rule, weekly activity. |
 | `services/posting_parser.py`, `fit_scorer.py`, `cv_advisor.py`, `message_drafter.py` | The four LLM tasks. Each builds a prompt, asks for JSON constrained by a schema, verifies the answer in code, and retries with the reasons if verification fails. |
+| `services/contacts.py` | Contacts, interactions ("They replied" is an inbound message), reminders, search links, and the emails/profile links a posting states. |
+| `services/outreach_stats.py`, `contact_extractor.py` | Reply statistics per person; names a posting mentions (model output verified against the posting). |
 | `services/matching.py` | Stores CVs, postings and fit analyses and glues the LLM tasks to the database. |
 | `ingestion/csv_import.py`, `cv.py` | CSV import (idempotent, row-level errors) and CV text extraction (PDF, DOCX, MD, TXT). |
 | `llm/` | `LLMClient` protocol; `OllamaClient`; `FakeLLM` for tests; tolerant JSON extraction; the retry harness. |
@@ -43,6 +46,8 @@ Rules that keep it testable: `domain/` imports nothing from the other layers; `s
 ## Data
 
 The current status of an application is a cache of its latest `StatusEvent`; the events are the record, and the funnel is computed from them. An application's *waiting clock* runs from its latest activity, which is the later of its last status event and its last logged `Followup`.
+
+People are kept apart from applications: a `Contact` belongs to a company, an `Interaction` may point at an application, and deleting an application keeps the people and what was said (the link is cleared). A message logged from an application to a contact is stored once as a `Followup` and once as an outbound `Interaction`, so both views agree.
 
 Postings, fit analyses and CV versions hang off the application loosely: deleting an application keeps its postings (they are unlinked), and deleting a CV version deletes only the analyses made with it. A fit analysis stores its per-requirement verdicts and, once requested, the CV advice, as JSON.
 
@@ -69,7 +74,7 @@ jobtrail listens on localhost, but a browser can still be pointed at it by any p
 
 ## The macOS app
 
-`macos/` is a Swift package that builds `jobtrail.app`: a SwiftUI window around a `WKWebView` that shows the same server-rendered UI. It does not talk to the server through any special API; it starts `.venv/bin/jobtrail serve` on a free port, waits for `/health`, and loads the page. The server watches the app's process id (`JOBTRAIL_PARENT_PID`) and exits if it disappears, so a crashed app cannot leave a server behind. The logic that carries risk (project resolution, environment, URL policy, server lifecycle) is separated from the views and unit-tested; see [`macos/README.md`](../macos/README.md).
+`macos/` is a Swift package that builds `jobtrail.app`: a SwiftUI window around a `WKWebView` that shows the same server-rendered UI. It does not talk to the server through any special API; it starts `.venv/bin/jobtrail serve` on a free port, waits for `/health`, and loads the page. The server watches the app's process id (`JOBTRAIL_PARENT_PID`) and exits if it disappears, so a crashed app cannot leave a server behind. It also polls `GET /api/reminders` (read-only JSON of what is due) to show the Dock badge and post one notification per reminder per day. The logic that carries risk (project resolution, environment, URL policy, server lifecycle, which reminders to announce) is separated from the views and unit-tested; see [`macos/README.md`](../macos/README.md).
 
 ## Extending
 

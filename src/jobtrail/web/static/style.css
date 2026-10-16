@@ -140,3 +140,12 @@ pre.doc { white-space: pre-wrap; word-break: break-word; background: var(--surfa
 .score { font-size: 2rem; font-weight: 700; line-height: 1; min-width: 84px; }
 .score small { font-size: .9rem; font-weight: 400; color: var(--muted); }
 .v-met { color: var(--s-offer); } .v-partial { color: var(--s-follow_up_sent); } .v-missing { color: var(--s-no_response); }
+
+/* contacts and reminders */
+.chip.waiting { background: var(--warn-bg); color: var(--warn-fg); border-color: transparent; }
+.chip.answered { color: var(--s-offer); border-color: currentColor; background: transparent; }
+.check { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+.reply-bar { display: flex; gap: 14px; align-items: center; background: var(--warn-bg); color: var(--warn-fg);
+  padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
+ul.reminders li { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.overdue { color: var(--danger); font-weight: 600; }

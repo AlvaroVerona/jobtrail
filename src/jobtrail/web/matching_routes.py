@@ -11,6 +11,8 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from jobtrail.domain.followup import FollowupKind
 from jobtrail.ingestion.cv import CVError
 from jobtrail.llm.base import LLMClient, LLMError, LLMUnavailable
+from jobtrail.services.contact_extractor import ContactExtractor
+from jobtrail.services.contacts import find_mentions
 from jobtrail.services.matching import CVService, MatchingService, NotFound
 from jobtrail.services.message_drafter import MessageDrafter
 from jobtrail.services.tracker import ApplicationNotFound, TrackerService
@@ -140,7 +142,10 @@ def posting_create(
     return redirect(f"/postings/{posting.id}")
 
 
-def _posting_page(request, session, posting, *, error=None, status_code=200):
+def _posting_page(request, session, posting, *, error=None, status_code=200, suggestions=None):
+    company = (
+        posting.application.company.name if posting.application else posting.parsed.get("company")
+    )
     return render(
         request,
         "posting_detail.html",
@@ -150,6 +155,9 @@ def _posting_page(request, session, posting, *, error=None, status_code=200):
         versions=CVService(session).list(),
         error=error,
         llm_problem=get_llm(request).check(),
+        mentions=find_mentions(posting.raw_text),
+        suggestions=suggestions,
+        contact_company=company or "",
     )
 
 
@@ -235,3 +243,17 @@ def draft_message(
     except (ValueError, NotFound) as exc:
         return _detail(request, tracker, application, error=str(exc), status_code=400)
     return _detail(request, tracker, application, draft=draft)
+
+
+@router.post("/postings/{posting_id}/people")
+def posting_people(request: Request, posting_id: int, session: SessionDep):
+    """Ask the local model which people the posting names. Nothing is saved."""
+    service = MatchingService(session, get_llm(request))
+    posting = _or_404(service.get_posting, posting_id)
+    try:
+        people = ContactExtractor(service.llm).find_people(posting.raw_text)
+    except LLMUnavailable as exc:
+        return _posting_page(request, session, posting, error=str(exc), status_code=503)
+    except (LLMError, ValueError) as exc:
+        return _posting_page(request, session, posting, error=str(exc), status_code=502)
+    return _posting_page(request, session, posting, suggestions=people)

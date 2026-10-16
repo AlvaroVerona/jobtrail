@@ -133,6 +133,8 @@ def prepare(client: httpx.Client) -> list[tuple[str, str, int, int]]:
         ("fit", client.get(posting_path).text, 1200, 1680),
         ("analytics", client.get("/analytics").text, 1200, 1130),
         ("draft", draft.text, 1200, 1500),
+        ("contacts", client.get("/contacts").text, 1200, 760),
+        ("followups", client.get("/followups").text, 1200, 900),
     ]
 
 

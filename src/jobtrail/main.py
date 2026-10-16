@@ -11,6 +11,7 @@ from jobtrail.database.session import init_db, make_engine, make_session_factory
 from jobtrail.llm.base import LLMClient
 from jobtrail.llm.ollama_client import OllamaClient
 from jobtrail.web import security
+from jobtrail.web.crm_routes import router as crm_router
 from jobtrail.web.matching_routes import router as matching_router
 from jobtrail.web.routes import register_error_pages, router
 
@@ -46,6 +47,7 @@ def create_app(
     app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
     app.include_router(router)
     app.include_router(matching_router)
+    app.include_router(crm_router)
     register_error_pages(app)
 
     @app.get("/health")

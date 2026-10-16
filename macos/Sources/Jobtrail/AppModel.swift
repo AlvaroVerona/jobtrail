@@ -10,8 +10,13 @@ final class AppModel {
 
     let controller = WebController()
     let launcher: ServerLauncher
+    let reminders: ReminderPoller
 
     private init() {
+        let controller = controller
+        reminders = ReminderPoller(
+            notifier: SystemNotifier(open: { path in controller.open(path: path) })
+        )
         launcher = ServerLauncher(configProvider: {
             try ServerConfig.resolve(
                 infoDictionary: Bundle.main.infoDictionary,

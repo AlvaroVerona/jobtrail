@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "_macros.html" import state_chip, reminder_list, reminder_form %}
+{% block title %}{{ contact.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ contact.name }}</h1>
+    <div class="muted">{% if contact.job_title %}{{ contact.job_title }} &middot; {% endif %}{{ contact.company.name }} &middot; {{ state_chip(state) }}</div>
+    <div class="muted small">
+      {% if contact.profile_url and contact.profile_url.startswith(("http://", "https://")) %}<a href="{{ contact.profile_url }}" target="_blank" rel="noopener noreferrer">Profile</a>{% endif %}
+      {% if contact.email %}{% if contact.profile_url %} &middot; {% endif %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% endif %}
+    </div>
+  </div>
+  <form method="post" action="/contacts/{{ contact.id }}/delete" hx-boost="false"
+        onsubmit="return confirm('Delete this person and everything logged with them?')">
+    <button type="submit" class="danger">Delete</button>
+  </form>
+</div>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+{% if state.awaiting %}
+<form method="post" action="/contacts/{{ contact.id }}/replied" class="reply-bar">
+  <span>You are waiting for an answer ({{ state.days_waiting }} days).</span>
+  <button type="submit" class="primary">They replied</button>
+</form>
+{% endif %}
+
+<div class="two-col">
+  <section>
+    <h2>Details</h2>
+    <form method="post" action="/contacts/{{ contact.id }}/edit" class="form card-form">
+      <label>Name <input name="name" value="{{ contact.name }}" required></label>
+      <label>Job title <input name="job_title" list="titles" value="{{ contact.job_title or '' }}"></label>
+      <label>Found through
+        <select name="source">{% for value, label in sources %}<option value="{{ value }}"{% if contact.source == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      </label>
+      <label>Email <input name="email" type="email" value="{{ contact.email or '' }}"></label>
+      <label class="wide">Profile link <input name="profile_url" type="url" value="{{ contact.profile_url or '' }}"></label>
+      <label class="wide">Notes <textarea name="notes" rows="3">{{ contact.notes or '' }}</textarea></label>
+      <datalist id="titles">{% for t in title_suggestions %}<option value="{{ t }}">{% endfor %}</datalist>
+      <div class="actions wide"><button type="submit" class="primary">Save details</button></div>
+    </form>
+
+    <h2>Reminders</h2>
+    {{ reminder_list(reminders, "/contacts/" ~ contact.id, today) }}
+    {% if not reminders %}<p class="muted">None.</p>{% endif %}
+    {{ reminder_form(none, contact.id, "/contacts/" ~ contact.id) }}
+  </section>
+
+  <section>
+    <h2>Log something</h2>
+    <form method="post" action="/contacts/{{ contact.id }}/interactions" class="form card-form">
+      <label>What
+        <select name="kind">{% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+      </label>
+      <label>Direction (messages only)
+        <select name="direction">
+          <option value="outbound">I wrote to them</option>
+          <option value="inbound">They wrote to me</option>
+          <option value="">(not a message)</option>
+        </select>
+      </label>
+      <label>Through
+        <select name="channel">{% for value, label in channels %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+      </label>
+      <label>Date <input type="date" name="date"><small class="muted">Empty means now.</small></label>
+      <label class="wide">Application
+        <select name="application_id">
+          <option value="">(none)</option>
+          {% for a in applications %}<option value="{{ a.id }}">{{ a.role or "(no role)" }} &middot; {{ a.status.value|status_label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="wide">What was said <textarea name="summary" rows="3"></textarea></label>
+      <div class="actions wide"><button type="submit" class="primary">Add to the history</button></div>
+    </form>
+
+    <h2>History</h2>
+    {% if timeline %}
+    <ol class="timeline">
+      {% for i in timeline %}
+      <li>
+        <strong>{{ labels[i.kind] }}{% if i.direction %}: {{ labels[i.direction]|lower }}{% endif %}</strong>
+        <span class="muted">{{ i.at|fmt_date }} &middot; {{ labels[i.channel] }}</span>
+        {% if i.application %}<span class="muted"> &middot; <a href="/applications/{{ i.application.id }}">{{ i.application.role or i.application.company.name }}</a></span>{% endif %}
+        {% if i.summary %}<div>{{ i.summary }}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}<p class="muted">Nothing logged yet.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

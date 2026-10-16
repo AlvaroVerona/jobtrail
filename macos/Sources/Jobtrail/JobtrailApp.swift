@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         // Synchronous on purpose, as in the BusinessConsultant app: a Task started here may not
         // run before the process exits, which left the server behind.
+        AppModel.shared.reminders.stop()
         AppModel.shared.launcher.shutdown()
     }
 }
@@ -59,6 +60,7 @@ struct JobtrailCommands: Commands {
                 .keyboardShortcut("o", modifiers: [.command, .shift])
             Button("Open Data Folder") { model.showDataFolder() }
             Button("Show Server Log") { model.showServerLog() }
+            Button("Check Reminders Now") { Task { await model.reminders.pollOnce() } }
             Divider()
             Button("Restart Server") { Task { await model.launcher.restart() } }
                 .keyboardShortcut("r", modifiers: [.command, .shift])

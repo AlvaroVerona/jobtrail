@@ -14,10 +14,21 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from jobtrail.database.models import Application, Channel, Track, utcnow
 from jobtrail.domain.followup import ALLOWED_STATUSES, LABELS, FollowupKind
+from jobtrail.domain.outreach import LABELS as OUTREACH_LABELS
+from jobtrail.domain.outreach import Channel as ContactChannel
 from jobtrail.domain.status import ALLOWED_TRANSITIONS, Status
 from jobtrail.services.analytics import AnalyticsService
+from jobtrail.services.contacts import (
+    ContactService,
+    ReminderService,
+    local_today,
+    reminder_title,
+    reminder_url,
+    search_links,
+)
 from jobtrail.services.matching import CVService
 from jobtrail.services.message_drafter import LANGUAGES
+from jobtrail.services.outreach_stats import OutreachStatsService
 from jobtrail.services.tracker import ApplicationNotFound, TrackerService
 
 router = APIRouter()
@@ -65,7 +76,12 @@ def allowed_targets(status: Status) -> list[Status]:
 templates.env.filters.update(
     status_label=status_label, fmt_date=fmt_date, days_ago=days_ago, pct=pct
 )
-templates.env.globals.update(allowed_targets=allowed_targets, STATUS_ORDER=STATUS_ORDER)
+templates.env.globals.update(
+    allowed_targets=allowed_targets,
+    STATUS_ORDER=STATUS_ORDER,
+    reminder_title=reminder_title,
+    reminder_url=reminder_url,
+)
 
 
 def render(request: Request, name: str, status_code: int = 200, **context) -> HTMLResponse:
@@ -296,6 +312,12 @@ def _detail(request, tracker, application, *, error=None, status_code=200, draft
         kind_labels={k.value: LABELS[k] for k in FollowupKind},
         languages=LANGUAGES,
         versions=CVService(tracker.session).list(),
+        people=ContactService(tracker.session).for_company(application.company_id),
+        search_links=search_links(application.company.name, application.role),
+        reminders=ReminderService(tracker.session).open_for_application(application.id),
+        outreach_labels=OUTREACH_LABELS,
+        contact_channels=[(c.value, OUTREACH_LABELS[c.value]) for c in ContactChannel],
+        today=local_today(),
         **option_names(tracker),
     )
 
@@ -339,6 +361,8 @@ def record_followup(
     subject: Annotated[str, Form()] = "",
     text: Annotated[str, Form()] = "",
     note: Annotated[str, Form()] = "",
+    contact_id: Annotated[str, Form()] = "",
+    channel: Annotated[str, Form()] = "email",
     next: Annotated[str, Form()] = "",
 ):
     tracker = TrackerService(session)
@@ -346,11 +370,17 @@ def record_followup(
     body = text.strip()
     full_text = f"Subject: {subject.strip()}\n\n{body}" if subject.strip() and body else body
     try:
+        contact = ContactService(session).get(int(contact_id)) if contact_id.strip() else None
         tracker.record_followup(
-            application, FollowupKind(kind), text=full_text or None, note=note.strip() or None
+            application,
+            FollowupKind(kind),
+            text=full_text or None,
+            note=note.strip() or None,
+            contact=contact,
+            channel=channel,
         )
         session.commit()
-    except ValueError as exc:
+    except (ValueError, LookupError) as exc:
         session.rollback()
         return _detail(request, tracker, application, error=str(exc), status_code=400)
     return redirect(safe_next(next, f"/applications/{application_id}#outreach"))
@@ -400,6 +430,8 @@ def delete_application(application_id: int, session: SessionDep):
 @router.get("/followups")
 def followups(request: Request, session: SessionDep):
     settings = request.app.state.settings
+    reminders = ReminderService(session)
+    today = local_today()
     analytics = AnalyticsService(
         session, min_sample=settings.min_sample, stale_after_days=settings.stale_after_days
     )
@@ -408,6 +440,14 @@ def followups(request: Request, session: SessionDep):
         "followups.html",
         stale=analytics.stale_applications(),
         stale_after_days=settings.stale_after_days,
+        due_reminders=reminders.due(today),
+        upcoming_reminders=reminders.upcoming(today, days=7),
+        waiting_contacts=[r for r in ContactService(session).list_contacts(awaiting_only=True)][
+            :10
+        ],
+        reminder_title=reminder_title,
+        reminder_url=reminder_url,
+        today=today,
         Status=Status,
     )
 
@@ -420,8 +460,15 @@ def analytics_page(request: Request, session: SessionDep):
     )
     report = analytics.report()
     peak = max((count for _, count in report.weekly_applications), default=0)
+    outreach = OutreachStatsService(session, min_sample=settings.min_sample).report()
     return render(
-        request, "analytics.html", report=report, min_sample=settings.min_sample, peak=peak
+        request,
+        "analytics.html",
+        report=report,
+        min_sample=settings.min_sample,
+        peak=peak,
+        outreach=outreach,
+        outreach_labels=OUTREACH_LABELS,
     )
 
 

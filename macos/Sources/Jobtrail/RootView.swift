@@ -17,6 +17,13 @@ struct RootView: View {
         }
         .frame(minWidth: 900, minHeight: 620)
         .task { await model.launcher.start() }
+        .onChange(of: model.launcher.state) { _, state in
+            if case .running(let url) = state {
+                model.reminders.start(baseURL: url)
+            } else {
+                model.reminders.stop()
+            }
+        }
     }
 }
 

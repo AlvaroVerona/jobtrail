@@ -1,8 +1,26 @@
 {% extends "base.html" %}
-{% from "_macros.html" import badge %}
+{% from "_macros.html" import badge, state_chip, reminder_list %}
 {% block title %}Follow-ups{% endblock %}
 {% block content %}
-<div class="page-head"><h1>Follow-ups <span class="count">{{ stale|length }}</span></h1></div>
+<div class="page-head"><h1>Follow-ups</h1></div>
+
+<h2>Reminders <span class="count">{{ due_reminders|length }} due</span></h2>
+{% if due_reminders %}{{ reminder_list(due_reminders, "/followups", today) }}{% else %}<p class="muted">Nothing due today.</p>{% endif %}
+{% if upcoming_reminders %}
+<p class="muted small">Coming up this week</p>
+{{ reminder_list(upcoming_reminders, "/followups", today) }}
+{% endif %}
+
+{% if waiting_contacts %}
+<h2>Waiting for an answer from <span class="count">{{ waiting_contacts|length }}</span></h2>
+<ul class="plain">
+  {% for row in waiting_contacts %}
+  <li><a href="/contacts/{{ row.contact.id }}">{{ row.contact.name }}</a> <span class="muted">{{ row.contact.company.name }}</span> {{ state_chip(row.state) }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<h2>Applications waiting too long <span class="count">{{ stale|length }}</span></h2>
 <p class="muted">Applications still waiting for a reply after more than {{ stale_after_days }} days. Change the limit with <code>JOBTRAIL_STALE_AFTER_DAYS</code>.</p>
 
 <div class="table-wrap">

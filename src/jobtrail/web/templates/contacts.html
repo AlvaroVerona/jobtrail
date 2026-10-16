@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_macros.html" import state_chip %}
+{% block title %}Contacts{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Contacts <span class="count">{{ rows|length }}</span></h1>
+  <a class="btn primary" href="/contacts/new">+ Add contact</a>
+</div>
+<p class="muted">The people you write to, and whether they answered. You add them yourself: jobtrail does not look anyone up or send anything.</p>
+
+<form method="get" action="/contacts" class="filters">
+  <input type="search" name="q" value="{{ filters.q }}" placeholder="Search name, company or title">
+  <label class="check"><input type="checkbox" name="awaiting" value="1"{% if filters.awaiting %} checked{% endif %}> Waiting for a reply</label>
+  <button type="submit">Filter</button>
+  <a href="/contacts" class="btn">Reset</a>
+</form>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Name</th><th>Company</th><th>Title</th><th>Found through</th><th>Status</th><th class="num">Last activity</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td><a href="/contacts/{{ row.contact.id }}">{{ row.contact.name }}</a></td>
+      <td>{{ row.contact.company.name }}</td>
+      <td>{{ row.contact.job_title or "" }}</td>
+      <td>{{ labels[row.contact.source] }}</td>
+      <td>{{ state_chip(row.state) }}</td>
+      <td class="num muted">{% if row.state.last_activity %}{{ row.state.last_activity|days_ago }}d ago{% else %}-{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="muted">No contacts yet. Open an application and use <em>Find someone to write to</em>, or add one here.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

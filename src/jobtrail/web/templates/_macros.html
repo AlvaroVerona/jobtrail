@@ -44,3 +44,41 @@
 </table>
 </div>
 {% endmacro %}
+
+{% macro state_chip(state) %}
+  {% if state.awaiting %}<span class="chip waiting">waiting {{ state.days_waiting }}d</span>
+  {% elif state.responded %}<span class="chip answered">replied</span>
+  {% else %}<span class="chip">not contacted yet</span>{% endif %}
+{% endmacro %}
+
+{% macro reminder_list(items, next, today) %}
+  {% if items %}
+  <ul class="plain reminders">
+    {% for r in items %}
+    <li>
+      <span class="{{ 'overdue' if r.due_on <= today else 'muted' }}">{{ r.due_on.strftime("%d %b") }}</span>
+      <a href="{{ reminder_url(r) }}">{{ reminder_title(r) }}</a>
+      <span class="row-actions">
+        <form method="post" action="/reminders/{{ r.id }}/done"><input type="hidden" name="next" value="{{ next }}"><button type="submit">Done</button></form>
+        <form method="post" action="/reminders/{{ r.id }}/snooze"><input type="hidden" name="next" value="{{ next }}"><input type="hidden" name="days" value="3"><button type="submit">+3 days</button></form>
+        <form method="post" action="/reminders/{{ r.id }}/delete"><input type="hidden" name="next" value="{{ next }}"><button type="submit" class="danger">Delete</button></form>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+{% endmacro %}
+
+{% macro reminder_form(application_id, contact_id, next) %}
+<form method="post" action="/reminders" class="inline">
+  {% if application_id %}<input type="hidden" name="application_id" value="{{ application_id }}">{% endif %}
+  {% if contact_id %}<input type="hidden" name="contact_id" value="{{ contact_id }}">{% endif %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <select name="days" aria-label="When">
+    <option value="1">tomorrow</option><option value="3">in 3 days</option>
+    <option value="7" selected>in a week</option><option value="14">in 2 weeks</option><option value="30">in a month</option>
+  </select>
+  <input name="note" placeholder="Reminder (optional)" aria-label="Reminder text">
+  <button type="submit">Remind me</button>
+</form>
+{% endmacro %}

@@ -7,13 +7,17 @@ from jobtrail.database.models import (
     Application,
     Channel,
     Company,
+    Contact,
     Followup,
+    Interaction,
     StatusEvent,
     Track,
     utcnow,
 )
-from jobtrail.domain.followup import FollowupKind, check_kind_for_status
+from jobtrail.domain.followup import LABELS, FollowupKind, check_kind_for_status
+from jobtrail.domain.outreach import Channel as ContactChannel
 from jobtrail.domain.status import SUBMITTED_STATUSES, Status, check_transition
+from jobtrail.domain.timeutil import require_aware
 
 _EDITABLE_FIELDS = frozenset(
     {"role", "notes", "salary_expected", "salary_asked", "applied_at", "channel", "track"}
@@ -28,10 +32,7 @@ class OptionError(ValueError):
     """A channel or track could not be renamed or deleted."""
 
 
-def _require_aware(value: datetime | None, name: str) -> datetime | None:
-    if value is not None and value.tzinfo is None:
-        raise ValueError(f"{name} must be timezone-aware (use UTC)")
-    return value
+_require_aware = require_aware
 
 
 class TrackerService:
@@ -71,6 +72,9 @@ class TrackerService:
             self.session.add(row)
             self.session.flush()
         return row
+
+    def list_companies(self) -> list[Company]:
+        return list(self.session.scalars(select(Company).order_by(func.lower(Company.name))))
 
     # -- applications --------------------------------------------------------------------
 
@@ -209,6 +213,8 @@ class TrackerService:
         text: str | None = None,
         note: str | None = None,
         at: datetime | None = None,
+        contact: Contact | None = None,
+        channel: str = "email",
     ) -> Followup:
         """Log a message that was sent. The first follow-up on an 'applied' application also
         moves it to 'follow-up sent'; later ones only extend the log, so a second or third
@@ -216,11 +222,30 @@ class TrackerService:
         kind = FollowupKind(kind)
         at = _require_aware(at, "at") or utcnow()
         check_kind_for_status(kind, application.status)
+        # Everything that can be refused is checked before anything is changed.
+        if contact is not None and contact.company_id != application.company_id:
+            raise ValueError("That contact works at a different company")
+        channel = ContactChannel(channel).value
         if kind is FollowupKind.FOLLOW_UP and application.status is Status.APPLIED:
             self.change_status(application, Status.FOLLOW_UP_SENT, at=at, note="Follow-up sent")
         followup = Followup(kind=kind.value, sent_at=at, text=text or None, note=note or None)
         application.followups.append(followup)
         self.session.flush()
+        if contact is not None:
+            # The same message, seen from the person's side of the CRM.
+            self.session.add(
+                Interaction(
+                    contact=contact,
+                    application=application,
+                    followup_id=followup.id,
+                    kind="message",
+                    direction="outbound",
+                    channel=channel,
+                    summary=(text or LABELS[kind]).strip()[:500],
+                    at=at,
+                )
+            )
+            self.session.flush()
         return followup
 
     def history(self, application: Application) -> list[StatusEvent]:
@@ -230,6 +255,14 @@ class TrackerService:
         # A posting and its fit analyses stay useful without the application: just unlink.
         for posting in application.postings:
             posting.application_id = None
+        # The people and the history with them outlive the application.
+        for interaction in application.interactions:
+            interaction.application_id = None
+        for reminder in list(application.reminders):
+            if reminder.contact_id is None:
+                self.session.delete(reminder)
+            else:
+                reminder.application_id = None
         self.session.delete(application)
         self.session.flush()
 

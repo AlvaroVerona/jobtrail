@@ -27,4 +27,29 @@
   {% endfor %}
 </ul>
 <p class="muted">{{ report.stale|length }} application(s) waiting too long: see <a href="/followups">Follow-ups</a>.</p>
+
+<h2>Reaching people</h2>
+<p class="muted">Counted per person, not per message: of the people you wrote to, how many answered. Same rule as above: a small group is not compared.</p>
+{% if outreach.contacted %}
+<div class="table-wrap"><table>
+  <thead><tr><th></th><th class="num">Wrote to</th><th class="num">Answered</th><th class="num">Median days to answer</th><th></th></tr></thead>
+  <tbody>
+    <tr><td>All contacts</td><td class="num">{{ outreach.contacted }}</td>
+      <td class="num">{{ outreach.responded }} <small class="muted">{{ outreach.rate.value|pct }} ({{ outreach.rate.low|pct }}&ndash;{{ outreach.rate.high|pct }})</small></td>
+      <td class="num">{% if outreach.median_response_days is not none %}{{ outreach.median_response_days|round|int }}d <small class="muted">n={{ outreach.response_time_n }}</small>{% else %}-{% endif %}</td>
+      <td>{% if not outreach.conclusive %}<span class="flag">too few to compare</span>{% endif %}</td></tr>
+    {% for title, rows in [("By channel", outreach.by_channel), ("By how you found them", outreach.by_source)] %}
+      <tr><th colspan="5">{{ title }}</th></tr>
+      {% for row in rows %}
+      <tr><td>{{ outreach_labels[row.label] }}</td><td class="num">{{ row.contacted }}</td>
+        <td class="num">{{ row.responded }} <small class="muted">{{ row.rate.value|pct }} ({{ row.rate.low|pct }}&ndash;{{ row.rate.high|pct }})</small></td>
+        <td></td><td>{% if not row.conclusive %}<span class="flag">too few to compare</span>{% endif %}</td></tr>
+      {% endfor %}
+    {% endfor %}
+  </tbody>
+</table></div>
+<p class="muted small">{{ outreach.awaiting }} person(s) waiting for an answer: see <a href="/contacts?awaiting=1">Contacts</a>.</p>
+{% else %}
+<p class="muted">You have not logged writing to anyone yet. Add people on the <a href="/contacts">Contacts</a> page.</p>
+{% endif %}
 {% endblock %}

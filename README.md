@@ -19,6 +19,7 @@ Applying in volume (LinkedIn Easy Apply, say) leaves you with a spreadsheet of "
 | **Match** | Paste a posting: its requirements are extracted. Compare it with a CV version: each requirement is *met / partial / missing*, with the exact words of your CV that back it. |
 | **Advise** | Which existing CV lines to put forward for a posting, which wording to keep, and which requirements your CV does not evidence (so you do not claim them). |
 | **Write** | Draft a follow-up, thank-you or recruiter intro in English or Spanish. jobtrail sends nothing: you edit, send it yourself, and record it so the waiting clock restarts. |
+| **Keep in touch** | A light CRM: the people you write to, what was said, whether they answered, and reminders to look again. See [Contacts and reminders](#contacts-and-reminders-a-light-crm). |
 
 ![Fit analysis and CV advice](docs/images/fit.png)
 
@@ -90,8 +91,8 @@ Environment variables or a `.env` file (see `.env.example`).
 ```bash
 uv sync
 uv run ruff check . && uv run ruff format --check .
-uv run pytest                          # 312 tests, none of them calls a real model
-(cd macos && swift test)               # 26 tests for the macOS app (macOS only)
+uv run pytest                          # 404 tests, none of them calls a real model
+(cd macos && swift test)               # 39 tests for the macOS app (macOS only)
 uv run python scripts/compare_models.py qwen3:8b llama3.1   # live model comparison (needs Ollama)
 uv run python scripts/screenshots.py   # regenerate docs/images (needs Ollama and Chrome)
 ```

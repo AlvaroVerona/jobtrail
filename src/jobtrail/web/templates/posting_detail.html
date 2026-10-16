@@ -38,6 +38,35 @@
 </div>
 <details><summary class="muted">Show the posting text</summary><pre class="doc">{{ posting.raw_text }}</pre></details>
 
+<h2>People mentioned in this posting</h2>
+{% set app_id = posting.application_id or "" %}
+{% macro add_link(name="", title="", email="", url="") -%}
+/contacts/new?company={{ contact_company|urlencode }}&amp;name={{ name|urlencode }}&amp;job_title={{ title|urlencode }}&amp;email={{ email|urlencode }}&amp;profile_url={{ url|urlencode }}&amp;source=posting&amp;application_id={{ app_id }}
+{%- endmacro %}
+{% if mentions.emails or mentions.profile_urls %}
+<p class="muted small">Found in the text by pattern matching, nothing guessed.</p>
+<ul class="plain">
+  {% for e in mentions.emails %}<li><code>{{ e }}</code> <a class="btn" href="{{ add_link(email=e) }}">Add as contact</a></li>{% endfor %}
+  {% for u in mentions.profile_urls %}<li><a href="{{ u }}" target="_blank" rel="noopener noreferrer">{{ u }}</a> <a class="btn" href="{{ add_link(url=u) }}">Add as contact</a></li>{% endfor %}
+</ul>
+{% else %}
+<p class="muted">No email addresses or LinkedIn profiles in the posting text.</p>
+{% endif %}
+<form method="post" action="/postings/{{ posting.id }}/people" hx-boost="false" class="inline">
+  <button type="submit" data-busy="Reading the posting&hellip; a local model can take a minute">Look for names in the posting</button>
+</form>
+{% if suggestions is not none %}
+  {% if suggestions %}
+  <ul class="plain">
+    {% for p in suggestions %}
+    <li><strong>{{ p.name }}</strong>{% if p.title %} <span class="muted">{{ p.title }}</span>{% endif %}
+      <a class="btn" href="{{ add_link(name=p.name, title=p.title or '') }}">Add as contact</a>
+      <div class="muted small">&ldquo;{{ p.quote }}&rdquo;</div></li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">The posting does not name anyone.</p>{% endif %}
+{% endif %}
+
 <h2>How well does a CV match?</h2>
 {% if llm_problem %}<p class="error" role="alert">The local model is not ready: {{ llm_problem }}</p>{% endif %}
 {% if versions %}

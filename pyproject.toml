@@ -4,6 +4,14 @@ version = "0.1.0"
 description = "Local-first job search tracker with funnel analytics and an optional local-LLM assistant"
 readme = "README.md"
 license = { text = "MIT" }
+authors = [{ name = "Alvaro Verona" }]
+keywords = ["job search", "tracker", "local-first", "ollama", "fastapi"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: End Users/Desktop",
+]
 requires-python = ">=3.12"
 dependencies = [
     "fastapi",
@@ -20,6 +28,9 @@ dependencies = [
 
 [dependency-groups]
 dev = ["pytest", "httpx", "ruff"]
+
+[project.urls]
+Repository = "https://github.com/AlvaroVerona/jobtrail"
 
 [project.scripts]
 jobtrail = "jobtrail.cli:main"

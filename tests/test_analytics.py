@@ -1,9 +1,9 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
 from jobtrail.cli import main
-from jobtrail.demo import load_demo
+from jobtrail.demo import _shift_to_recent, load_demo
 from jobtrail.domain.status import Status
 from jobtrail.reporting import format_report
 from jobtrail.services.analytics import NO_GROUP, AnalyticsService, wilson_rate
@@ -267,3 +267,30 @@ def test_cli_stats_demo_prints_the_report(isolated_data, capsys):
     assert main(["stats", "--demo"]) == 0
     out = capsys.readouterr().out
     assert "By channel" in out and "Referral" in out
+
+
+# -- the demo stays fresh ----------------------------------------------------------------------
+
+
+def test_demo_dates_end_three_days_ago_keeping_the_gaps():
+    original = "Company,Applied date,Response date\nA,2026-05-01,2026-05-10\nB,2026-05-20,\n"
+    shifted = _shift_to_recent(original, today=date(2027, 1, 11))
+    rows = [line.split(",") for line in shifted.strip().split("\n")[1:]]
+    # B, the latest application, lands on 8 Jan. A keeps its 19-day lead over B and its
+    # 9-day wait for a reply.
+    assert rows == [["A", "2026-12-20", "2026-12-29"], ["B", "2027-01-08", ""]]
+
+
+def test_demo_replies_are_never_dated_in_the_future():
+    original = "Company,Applied date,Response date\nA,2026-05-01,2026-06-30\nB,2026-05-20,\n"
+    shifted = _shift_to_recent(original, today=date(2027, 1, 11))
+    reply = shifted.strip().split("\n")[1].split(",")[2]
+    assert reply == "2027-01-10"  # clamped to yesterday
+
+
+def test_demo_always_has_recent_activity_and_something_overdue(session):
+    load_demo(session, today=date(2030, 3, 15))
+    service = AnalyticsService(session, stale_after_days=21)
+    weeks = service.weekly_applications(now=datetime(2030, 3, 15, tzinfo=UTC), weeks=8)
+    assert sum(count for _, count in weeks) >= 15
+    assert len(service.stale_applications(now=datetime(2030, 3, 15, tzinfo=UTC))) >= 3

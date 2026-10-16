@@ -1,6 +1,6 @@
 [project]
 name = "jobtrail"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local-first job search tracker with funnel analytics and an optional local-LLM assistant"
 readme = "README.md"
 license = { text = "MIT" }

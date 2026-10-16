@@ -221,3 +221,31 @@ def test_cli_demo_uses_a_separate_database(isolated_data, capsys):
     assert not (isolated_data / "jobtrail.db").exists()
     assert "JOBTRAIL_DB_FILE=demo.db" in capsys.readouterr().out
     assert main(["demo", "--reset"]) == 0
+
+
+def test_columns_that_are_not_read_are_reported_when_they_have_values(session):
+    header = "Company,Role,Status,Applied date,Platform,Next step,Contact\n"
+    report = run(
+        session,
+        "Acme,DS,Applied,2026-05-19,LinkedIn,Call Sam,\n"
+        "Globex,ML,Applied,2026-05-20,Workday,,\n"
+        "Initech,PM,Applied,2026-05-21,,,\n",
+        header=header,
+    )
+    # Only columns with at least one value are listed; "Contact" is empty everywhere.
+    assert report.ignored == {"Platform": 2, "Next step": 1}
+    assert report.created == 3  # reporting them changes nothing about the import
+
+
+def test_a_file_with_only_read_columns_reports_nothing_ignored(session):
+    assert run(session, "Acme,DS,Applied,2026-05-19,,,,,\n").ignored == {}
+
+
+def test_the_cli_prints_what_was_not_imported(isolated_data, capsys):
+    path = isolated_data / "apps.csv"
+    path.write_text(
+        "Company,Status,Applied date,Platform\nAcme,Applied,2026-05-19,LinkedIn\n", encoding="utf-8"
+    )
+    assert main(["import-csv", str(path), "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "Not imported" in out and "Platform (1 rows)" in out

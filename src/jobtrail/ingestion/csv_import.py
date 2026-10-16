@@ -68,6 +68,9 @@ class ImportReport:
     created: int = 0
     skipped_duplicates: int = 0
     errors: list[tuple[int, str]] = field(default_factory=list)  # (csv line number, message)
+    # Columns the importer does not read but that had values: column name -> rows with a value.
+    # Reported so nothing is dropped silently.
+    ignored: dict[str, int] = field(default_factory=dict)
 
     @property
     def total_rows(self) -> int:
@@ -143,8 +146,13 @@ def import_csv(session: Session, source: TextIO, *, dry_run: bool = False) -> Im
     tracker = TrackerService(session)
     seen = _existing_keys(session)
     report = ImportReport()
+    unread = [h for h in (reader.fieldnames or []) if h and h not in columns.values()]
+    ignored_counts = dict.fromkeys(unread, 0)
 
     for row in reader:
+        for column in unread:
+            if (row.get(column) or "").strip():
+                ignored_counts[column] += 1
         line = reader.line_num
 
         def cell(name: str, row=row) -> str:
@@ -166,6 +174,7 @@ def import_csv(session: Session, source: TextIO, *, dry_run: bool = False) -> Im
             _create(tracker, parsed)
         report.created += 1
 
+    report.ignored = {column: n for column, n in ignored_counts.items() if n}
     if dry_run:
         session.rollback()
     else:

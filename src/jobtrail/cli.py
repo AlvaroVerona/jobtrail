@@ -33,6 +33,9 @@ def _print_report(report: ImportReport, *, dry_run: bool = False) -> None:
         f"{verb} {report.created}, skipped {report.skipped_duplicates} duplicates, "
         f"{len(report.errors)} errors ({report.total_rows} rows)."
     )
+    if report.ignored:
+        listed = ", ".join(f"{column} ({n} rows)" for column, n in report.ignored.items())
+        print(f"Not imported (columns jobtrail does not read, with values): {listed}")
     for line, message in report.errors[:10]:
         print(f"  line {line}: {message}", file=sys.stderr)
     if len(report.errors) > 10:

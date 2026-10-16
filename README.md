@@ -45,7 +45,7 @@ uv run jobtrail import-csv applications.csv
 uv run jobtrail stats                                 # the analytics in the terminal
 ```
 
-`import-csv` needs a `Company` column; optional: `Role`, `Status`, `Applied date`, `Channel`/`Canal`, `Track`, `Expected salary`, `Asked salary`, `Response date`/`Fecha respuesta`, `Notes`. Headers are matched case-insensitively in English or Spanish, so a Notion database exported as CSV works as is. Dates may be `2026-05-19`, `19/05/2026` (day first) or `May 19, 2026`. Importing a file twice is safe, and bad rows are reported without stopping the import. Sample inputs for the AI features are in `src/jobtrail/demo_data/`.
+`import-csv` needs a `Company` column; optional: `Role`, `Status`, `Applied date`, `Channel`/`Canal`, `Track`, `Expected salary`, `Asked salary`, `Response date`/`Fecha respuesta`, `Notes`. Headers are matched case-insensitively in English or Spanish, so a Notion database exported as CSV works as is. Dates may be `2026-05-19`, `19/05/2026` (day first) or `May 19, 2026`. Importing a file twice is safe, bad rows are reported without stopping the import, and columns it does not read are listed afterwards with how many rows had a value, so nothing is dropped silently. Sample inputs for the AI features are in `src/jobtrail/demo_data/`.
 
 ![Analytics](docs/images/analytics.png)
 
@@ -91,7 +91,7 @@ Environment variables or a `.env` file (see `.env.example`).
 ```bash
 uv sync
 uv run ruff check . && uv run ruff format --check .
-uv run pytest                          # 405 tests, none of them calls a real model
+uv run pytest                          # 408 tests, none of them calls a real model
 (cd macos && swift test)               # 39 tests for the macOS app (macOS only)
 uv run python scripts/compare_models.py qwen3:8b llama3.1   # live model comparison (needs Ollama)
 uv run python scripts/screenshots.py   # regenerate docs/images (needs Ollama and Chrome)

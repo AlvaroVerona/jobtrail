@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- `import-csv` now lists the columns it does not read when they had values (for example a Notion export's `Plataforma` or `Last interaction`), so nothing is dropped silently. Found while importing a real 229-row export, which matched the source's numbers exactly.
+
 ## 0.2.0 - 2026-10-16
 
 ### Added

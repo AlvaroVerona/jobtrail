@@ -1,0 +1,17 @@
+# Personal data: never commit
+data/
+*.db
+*.sqlite
+.env
+
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+
+# macOS
+.DS_Store

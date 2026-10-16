@@ -17,9 +17,14 @@ jobs:
       - run: uv run pytest
       - name: Smoke test the server
         run: |
-          uv run jobtrail serve &
+          # Run the venv's entry point directly so $! is the server itself, send its output
+          # to a file (a background process holding the step's pipes open stalls the job),
+          # and always stop it so the post-job cache cleanup is not racing a live process.
+          .venv/bin/jobtrail serve > server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
           for i in $(seq 1 20); do
-            curl -fs http://127.0.0.1:8000/health && exit 0
+            if curl -fs http://127.0.0.1:8000/health; then exit 0; fi
             sleep 1
           done
-          echo "server did not come up" && exit 1
+          echo "server did not come up:" && cat server.log && exit 1

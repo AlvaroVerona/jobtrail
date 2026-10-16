@@ -535,3 +535,36 @@ def test_the_extractor_gives_up_on_unusable_output():
         ContactExtractor(FakeLLM("nope", "nope", "nope")).find_people(POSTING_WITH_PEOPLE)
     with pytest.raises(ValueError, match="empty"):
         ContactExtractor(FakeLLM()).find_people("  ")
+
+
+# -- databases made before the CRM existed -------------------------------------------------------
+
+
+def test_an_existing_database_gains_the_crm_tables_and_keeps_its_data():
+    """Opening an older database must add the new tables and leave everything in it alone."""
+    from sqlalchemy import inspect
+    from sqlalchemy.orm import Session as OrmSession
+
+    from jobtrail.database.models import Base
+    from jobtrail.database.session import init_db, make_engine
+    from jobtrail.services.tracker import TrackerService
+
+    engine = make_engine("sqlite://")
+    new_tables = {"contact", "interaction", "reminder"}
+    old_tables = [t for t in Base.metadata.sorted_tables if t.name not in new_tables]
+    Base.metadata.create_all(engine, tables=old_tables)  # the schema before the CRM
+    assert not new_tables & set(inspect(engine).get_table_names())
+    with OrmSession(engine) as session:
+        TrackerService(session).create_application("Acme", "Analyst", status=Status.APPLIED)
+        session.commit()
+
+    init_db(engine)  # what starting the app does
+
+    assert new_tables <= set(inspect(engine).get_table_names())
+    with OrmSession(engine) as session:
+        (application,) = TrackerService(session).list_applications()
+        assert (application.company.name, application.role) == ("Acme", "Analyst")
+        service = ContactService(session)
+        sam = service.create("Acme", "Sam")
+        service.add_interaction(sam, "message", direction="outbound")
+        session.commit()  # and the new tables work

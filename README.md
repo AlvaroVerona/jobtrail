@@ -91,7 +91,7 @@ Environment variables or a `.env` file (see `.env.example`).
 ```bash
 uv sync
 uv run ruff check . && uv run ruff format --check .
-uv run pytest                          # 404 tests, none of them calls a real model
+uv run pytest                          # 405 tests, none of them calls a real model
 (cd macos && swift test)               # 39 tests for the macOS app (macOS only)
 uv run python scripts/compare_models.py qwen3:8b llama3.1   # live model comparison (needs Ollama)
 uv run python scripts/screenshots.py   # regenerate docs/images (needs Ollama and Chrome)

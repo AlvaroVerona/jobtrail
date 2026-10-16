@@ -7,10 +7,12 @@ from jobtrail.database.models import (
     Application,
     Channel,
     Company,
+    Followup,
     StatusEvent,
     Track,
     utcnow,
 )
+from jobtrail.domain.followup import FollowupKind, check_kind_for_status
 from jobtrail.domain.status import SUBMITTED_STATUSES, Status, check_transition
 
 _EDITABLE_FIELDS = frozenset(
@@ -198,6 +200,28 @@ class TrackerService:
             application.applied_at = at
         self.session.flush()
         return event
+
+    def record_followup(
+        self,
+        application: Application,
+        kind: FollowupKind = FollowupKind.FOLLOW_UP,
+        *,
+        text: str | None = None,
+        note: str | None = None,
+        at: datetime | None = None,
+    ) -> Followup:
+        """Log a message that was sent. The first follow-up on an 'applied' application also
+        moves it to 'follow-up sent'; later ones only extend the log, so a second or third
+        nudge can be recorded without a status that cannot repeat."""
+        kind = FollowupKind(kind)
+        at = _require_aware(at, "at") or utcnow()
+        check_kind_for_status(kind, application.status)
+        if kind is FollowupKind.FOLLOW_UP and application.status is Status.APPLIED:
+            self.change_status(application, Status.FOLLOW_UP_SENT, at=at, note="Follow-up sent")
+        followup = Followup(kind=kind.value, sent_at=at, text=text or None, note=note or None)
+        application.followups.append(followup)
+        self.session.flush()
+        return followup
 
     def history(self, application: Application) -> list[StatusEvent]:
         return list(application.events)

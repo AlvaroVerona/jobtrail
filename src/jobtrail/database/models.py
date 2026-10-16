@@ -103,6 +103,11 @@ class Application(Base):
         order_by="StatusEvent.at, StatusEvent.id",
     )
     postings: Mapped[list["Posting"]] = relationship(back_populates="application")
+    followups: Mapped[list["Followup"]] = relationship(
+        back_populates="application",
+        cascade="all, delete-orphan",
+        order_by="Followup.sent_at, Followup.id",
+    )
 
 
 class StatusEvent(Base):
@@ -119,6 +124,22 @@ class StatusEvent(Base):
     note: Mapped[str | None] = mapped_column(Text)
 
     application: Mapped[Application] = relationship(back_populates="events")
+
+
+class Followup(Base):
+    """A message actually sent about an application: a follow-up, a thank-you, an intro.
+    Unlike a status, it can be repeated, and each one restarts the 'waiting' clock."""
+
+    __tablename__ = "followup"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("application.id"))
+    kind: Mapped[str] = mapped_column(String(30))
+    sent_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    text: Mapped[str | None] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text)
+
+    application: Mapped[Application] = relationship(back_populates="followups")
 
 
 class CVVersion(Base):

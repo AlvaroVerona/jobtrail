@@ -13,7 +13,7 @@ def _blank_to_none(value):
     return value
 
 
-class _Tolerant(BaseModel):
+class Tolerant(BaseModel):
     """Local models write the string "null" or "N/A" for a missing value; treat as None."""
 
     @field_validator("*", mode="before")
@@ -25,13 +25,13 @@ class _Tolerant(BaseModel):
 # -- what the model returns for a posting -----------------------------------------------------
 
 
-class RequirementOut(_Tolerant):
+class RequirementOut(Tolerant):
     text: str
     kind: Kind
     quote: str
 
 
-class PostingExtraction(_Tolerant):
+class PostingExtraction(Tolerant):
     title: str | None = None
     company: str | None = None
     seniority: Literal["intern", "junior", "mid", "senior", "lead", "unspecified"] = "unspecified"
@@ -66,7 +66,7 @@ class ParsedPosting(BaseModel):
 # -- fit ---------------------------------------------------------------------------------------
 
 
-class AssessmentOut(_Tolerant):
+class AssessmentOut(Tolerant):
     id: int
     status: Status
     cv_quote: str | None = None

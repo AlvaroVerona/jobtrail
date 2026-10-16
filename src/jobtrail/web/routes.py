@@ -13,8 +13,11 @@ from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from jobtrail.database.models import Application, Channel, Track, utcnow
+from jobtrail.domain.followup import ALLOWED_STATUSES, LABELS, FollowupKind
 from jobtrail.domain.status import ALLOWED_TRANSITIONS, Status
 from jobtrail.services.analytics import AnalyticsService
+from jobtrail.services.matching import CVService
+from jobtrail.services.message_drafter import LANGUAGES
 from jobtrail.services.tracker import ApplicationNotFound, TrackerService
 
 router = APIRouter()
@@ -277,7 +280,10 @@ def create_application(
     return redirect(f"/applications/{application.id}")
 
 
-def _detail(request, tracker, application, *, error=None, status_code=200):
+def _detail(request, tracker, application, *, error=None, status_code=200, draft=None):
+    kinds = [
+        (k.value, LABELS[k]) for k in FollowupKind if application.status in ALLOWED_STATUSES[k]
+    ]
     return render(
         request,
         "application_detail.html",
@@ -285,6 +291,11 @@ def _detail(request, tracker, application, *, error=None, status_code=200):
         app=application,
         history=tracker.history(application),
         error=error,
+        draft=draft,
+        kinds=kinds,
+        kind_labels={k.value: LABELS[k] for k in FollowupKind},
+        languages=LANGUAGES,
+        versions=CVService(tracker.session).list(),
         **option_names(tracker),
     )
 
@@ -317,6 +328,32 @@ def change_status(
         session.rollback()
         return _detail(request, tracker, application, error=str(exc), status_code=400)
     return redirect(safe_next(next, f"/applications/{application_id}"))
+
+
+@router.post("/applications/{application_id}/followup")
+def record_followup(
+    request: Request,
+    application_id: int,
+    session: SessionDep,
+    kind: Annotated[str, Form()] = "follow_up",
+    subject: Annotated[str, Form()] = "",
+    text: Annotated[str, Form()] = "",
+    note: Annotated[str, Form()] = "",
+    next: Annotated[str, Form()] = "",
+):
+    tracker = TrackerService(session)
+    application = get_application(tracker, application_id)
+    body = text.strip()
+    full_text = f"Subject: {subject.strip()}\n\n{body}" if subject.strip() and body else body
+    try:
+        tracker.record_followup(
+            application, FollowupKind(kind), text=full_text or None, note=note.strip() or None
+        )
+        session.commit()
+    except ValueError as exc:
+        session.rollback()
+        return _detail(request, tracker, application, error=str(exc), status_code=400)
+    return redirect(safe_next(next, f"/applications/{application_id}#outreach"))
 
 
 @router.post("/applications/{application_id}/edit")

@@ -7,7 +7,7 @@
 
 <div class="table-wrap">
 <table>
-  <thead><tr><th>Company</th><th>Role</th><th>Status</th><th class="num">Waiting</th><th>Next</th></tr></thead>
+  <thead><tr><th>Company</th><th>Role</th><th>Status</th><th class="num">Waiting</th><th class="num">Nudges</th><th>Next</th></tr></thead>
   <tbody>
   {% for item in stale %}
     {% set app = item.application %}
@@ -16,19 +16,19 @@
       <td>{{ app.role or "" }}</td>
       <td>{{ badge(app.status) }}</td>
       <td class="num">{{ item.days_waiting }}d</td>
+      <td class="num">{{ app.followups|length }}</td>
       <td><div class="row-actions">
-        {% if app.status == Status.APPLIED %}
-        <form method="post" action="/applications/{{ app.id }}/status"><input type="hidden" name="next" value="/followups"><input type="hidden" name="to_status" value="follow_up_sent"><button type="submit">Follow-up sent</button></form>
-        {% endif %}
+        <form method="post" action="/applications/{{ app.id }}/followup"><input type="hidden" name="next" value="/followups"><button type="submit">Follow-up sent</button></form>
+        <a class="btn" href="/applications/{{ app.id }}#outreach">Draft</a>
         <form method="post" action="/applications/{{ app.id }}/status"><input type="hidden" name="next" value="/followups"><input type="hidden" name="to_status" value="no_response"><button type="submit">No response</button></form>
         <form method="post" action="/applications/{{ app.id }}/status"><input type="hidden" name="next" value="/followups"><input type="hidden" name="to_status" value="rejected"><button type="submit">Rejected</button></form>
       </div></td>
     </tr>
   {% else %}
-    <tr><td colspan="5" class="muted">Nothing is overdue. Nice.</td></tr>
+    <tr><td colspan="6" class="muted">Nothing is overdue. Nice.</td></tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
-<p class="muted">A second follow-up cannot be recorded yet: an application already in "Follow-up sent" can move on, but not back to the same status.</p>
+<p class="muted">Each follow-up you record restarts the waiting clock, and you can record as many as you send.</p>
 {% endblock %}

@@ -2,7 +2,7 @@
 
 A local-first job search tracker: log applications with a reliable status history, see which channel, track and CV version actually gets responses, and (optionally) get help from a local LLM. No accounts, no cloud, no paid APIs.
 
-> **Status: early development (milestone M5 done).** Tracker, CSV import, analytics, the web UI, and local-LLM posting analysis and CV-fit scoring work end to end. CV tailoring advice and message drafts are next. See [`docs/DESIGN.md`](docs/DESIGN.md) for scope and milestones.
+> **Status: early development (milestone M6 done).** Tracker, CSV import, analytics, the web UI, and local-LLM posting analysis, CV-fit scoring, CV advice and message drafts work end to end. Next: polish and screenshots for the portfolio. See [`docs/DESIGN.md`](docs/DESIGN.md) for scope and milestones.
 
 ## Why
 
@@ -42,6 +42,13 @@ Sample inputs are in `src/jobtrail/demo_data/` (`sample_cv.md`, `sample_posting.
 How it avoids made-up experience: the model only proposes a verdict and a quote. The code then checks that the quote appears, word for word, in your CV; a claim without that evidence is downgraded to "missing" and flagged on screen. The score is plain arithmetic over the surviving verdicts (required items count double, a partial counts half), never a number the model chose. Limits: this proves the quoted words exist in your CV, not that they fit the requirement, so read each quote; and a one-letter skill such as "R" can only be cited through a longer line.
 
 All model calls go to Ollama on localhost; nothing leaves your machine. The default model is `qwen3:8b` (`JOBTRAIL_OLLAMA_MODEL` to change it); see [`docs/decisions/0001-default-model.md`](docs/decisions/0001-default-model.md) for why. `scripts/compare_models.py` reruns that comparison.
+
+### CV advice and message drafts (local LLM)
+
+* **CV advice**: on a fit analysis, *Get CV advice* lists the CV lines worth putting forward, where to put them, the wording to keep (words that are in both the posting and your CV), and the requirements your CV does not evidence, which you should not claim. It only points at lines already in your CV and only for requirements the fit analysis found support for; it never writes new CV content.
+* **Messages**: on an application, *Draft a message* writes a follow-up, thank-you or recruiter intro in English or Spanish. You edit it, send it yourself (jobtrail sends nothing), and record it. Each recorded message restarts the waiting clock, so a second or third follow-up counts, and the Follow-ups page uses the latest activity.
+
+How drafts stay honest: the model is not shown the posting's requirements (it tends to present them as your experience); every number and every proper noun or acronym in the draft must appear in your CV or the application data, otherwise it is sent back, and on the last attempt it is kept with a warning. This is a net, not a proof: lower-case terms and claims in plain words are not caught, so read the draft. See [`docs/decisions/0002-outreach-guards.md`](docs/decisions/0002-outreach-guards.md) for what went wrong in testing and why it works this way.
 
 ### Try it with demo data
 

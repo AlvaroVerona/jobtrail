@@ -1,7 +1,11 @@
 import pytest
 
 from jobtrail.domain.scoring import fit_score
-from jobtrail.domain.text_match import normalize, quote_in_text
+from jobtrail.domain.text_match import (
+    normalize,
+    quote_in_text,
+    unsupported_terms,
+)
 
 CV = """Built dashboards in Power BI used by 40 finance users
 - Automated monthly reporting with Python and SQL
@@ -67,3 +71,30 @@ def test_normalize_handles_ligatures_and_bullets():
 )
 def test_fit_score_formula(verdicts, expected):
     assert fit_score(verdicts) == expected
+
+
+ALLOWED = "Company: Northwind Labs. Recipient: Sam. Skills: Python, SQL, Power BI, scikit-learn."
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Hello Sam, I use Python and Power BI at Northwind Labs.", []),
+        ("I have deployed models with Kubernetes.", ["Kubernetes"]),
+        ("Experienced in TensorFlow and PyTorch.", ["TensorFlow", "PyTorch"]),
+        ("We used SAP and AWS daily.", ["SAP", "AWS"]),  # acronyms are always checked
+        ("Kubernetes is something I have not used.", []),  # sentence-initial words are skipped...
+        ("KUBERNETES is something I know.", ["KUBERNETES"]),  # ...unless shouted
+        ("Hola Sam, trabajo con Python. Gracias por su tiempo.", []),
+        ("I think I did well. In Madrid.", ["Madrid"]),  # a place the facts never gave
+        ("I built models with scikit-learn and pandas.", []),  # lower-case terms are not policed
+        ("", []),
+    ],
+)
+def test_unsupported_terms(text, expected):
+    assert unsupported_terms(text, ALLOWED) == expected
+
+
+def test_unsupported_terms_ignore_case_and_repeats():
+    assert unsupported_terms("Python and PYTHON", ALLOWED) == []
+    assert unsupported_terms("Kubernetes, then Kubernetes again", ALLOWED) == ["Kubernetes"]

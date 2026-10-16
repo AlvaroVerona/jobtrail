@@ -316,21 +316,26 @@ def test_search_treats_wildcards_literally(client, seed):
 
 def test_followups_lists_overdue_applications_with_actions(client, engine, seed):
     old = utcnow() - timedelta(days=40)
-    waiting = seed("Overdue Co", status=Status.APPLIED, at=old)
+    waiting = seed("Overdue Co", status=Status.APPLIED, at=old, applied_at=old)
     seed("Fresh Co", status=Status.APPLIED)
     chased = seed("Chased Co", status=Status.FOLLOW_UP_SENT, at=old)
     page = client.get("/followups").text
     assert "Overdue Co" in page and "Chased Co" in page and "Fresh Co" not in page
+    # A follow-up can be recorded again, even for one already nudged.
+    assert page.count("Follow-up sent</button>") == 2
 
-    chased_row = page.split("Chased Co")[1].split("</tr>")[0]
-    assert "Follow-up sent</button>" not in chased_row  # cannot repeat the same status
-
-    client.post(
-        f"/applications/{waiting}/status",
-        data={"to_status": "follow_up_sent", "next": "/followups"},
+    response = client.post(
+        f"/applications/{waiting}/followup",
+        data={"next": "/followups"},
+        follow_redirects=False,
     )
+    assert response.headers["location"] == "/followups"
     assert status_of(engine, waiting) is Status.FOLLOW_UP_SENT
-    assert status_of(engine, chased) is Status.FOLLOW_UP_SENT
+
+    client.post(f"/applications/{chased}/followup", data={"next": "/followups"})
+    assert status_of(engine, chased) is Status.FOLLOW_UP_SENT  # status unchanged...
+    page = client.get("/followups").text
+    assert "Overdue Co" not in page and "Chased Co" not in page  # ...but the clock restarted
 
 
 def test_analytics_page_warns_about_small_samples(client, seed):

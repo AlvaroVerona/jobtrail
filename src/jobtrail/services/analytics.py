@@ -84,6 +84,12 @@ class AnalyticsReport:
     weekly_applications: list[tuple[date, int]]
 
 
+def last_activity(application: Application) -> datetime:
+    """When something last happened on the application: a status change or a sent message."""
+    moments = [application.events[-1].at, *(f.sent_at for f in application.followups)]
+    return max(moments)
+
+
 def _ever(application: Application, statuses: frozenset[Status]) -> bool:
     return any(event.to_status in statuses for event in application.events)
 
@@ -113,6 +119,7 @@ class AnalyticsService:
     def _applications(self) -> list[Application]:
         query = select(Application).options(
             selectinload(Application.events),
+            selectinload(Application.followups),
             selectinload(Application.channel),
             selectinload(Application.track),
             selectinload(Application.company),
@@ -156,13 +163,13 @@ class AnalyticsService:
 
     def stale_applications(self, now: datetime | None = None) -> list[StaleItem]:
         """Applications still waiting for a reply for more than `stale_after_days`.
-        A follow-up restarts the clock, because the last event is what counts."""
+        The clock runs from the latest activity: a status change or a message you sent."""
         now = now or utcnow()
         stale = []
         for application in self._applications():
             if application.status not in WAITING:
                 continue
-            waiting = (now - application.events[-1].at).days
+            waiting = (now - last_activity(application)).days
             if waiting > self.stale_after_days:
                 stale.append(StaleItem(application, waiting))
         return sorted(stale, key=lambda s: -s.days_waiting)

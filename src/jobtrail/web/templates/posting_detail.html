@@ -53,7 +53,7 @@
 <p class="muted small">The score is arithmetic: required items count double, a partial match counts half. A claim only counts if the model's quote is found word for word in your CV. That proves the evidence exists, not that it fits the requirement, so read each quote.</p>
 
 {% for fit in posting.fits %}
-<section class="fit">
+<section class="fit" id="fit-{{ fit.id }}">
   <div class="fit-head">
     <div class="score">{% if fit.score is not none %}{{ fit.score }}<small>/100</small>{% else %}-{% endif %}</div>
     <div>
@@ -83,6 +83,34 @@
     </tbody>
   </table>
   </div>
+
+  {% set advice = fit.detail.get("advice") %}
+  {% if advice %}
+  <h3>CV advice</h3>
+  <p class="muted small">Only lines already in your CV: nothing is written for you. Quotes were checked against it.</p>
+  {% if advice.dropped %}<p class="notice">{{ advice.dropped }} suggestion(s) were left out because their quote is not in your CV.</p>{% endif %}
+  {% if advice.highlights %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Put forward</th><th>For requirement</th><th>Where</th></tr></thead>
+    <tbody>
+    {% for h in advice.highlights %}
+      <tr><td>&ldquo;{{ h.cv_quote }}&rdquo;{% if h.why %}<div class="muted small">{{ h.why }}</div>{% endif %}</td>
+          <td>{{ h.requirement }}{% if h.kind == "must" %} <span class="chip">required</span>{% endif %}</td>
+          <td><span class="chip">{{ h.placement }}</span></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="muted">Nothing in this CV clearly supports the requirements.</p>{% endif %}
+  {% if advice.keywords %}<p>Keep this wording (it is in both the posting and your CV): {% for k in advice.keywords %}<span class="chip">{{ k }}</span> {% endfor %}</p>{% endif %}
+  {% if advice.not_evidenced %}
+  <p><strong>Not evidenced in your CV</strong> <span class="muted small">(do not claim these unless they are true; if they are, add them to the CV yourself)</span></p>
+  <ul>{% for n in advice.not_evidenced %}<li>{{ n.text }}{% if n.kind == "must" %} <span class="chip">required</span>{% endif %}</li>{% endfor %}</ul>
+  {% endif %}
+  {% else %}
+  <form method="post" action="/postings/{{ posting.id }}/fit/{{ fit.id }}/advice" hx-boost="false">
+    <button type="submit" data-busy="Reading your CV&hellip; a local model can take a minute">Get CV advice for this CV</button>
+  </form>
+  {% endif %}
 </section>
 {% endfor %}
 {% endblock %}

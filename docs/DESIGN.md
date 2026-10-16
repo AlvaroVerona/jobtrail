@@ -99,9 +99,9 @@ Cada una tiene un esquema Pydantic de salida, un prompt versionado y un test con
 
 **Sin LLM disponible**, estas cuatro se desactivan con un mensaje claro y el resto de la app sigue funcionando.
 
-**Estado (M5):** `posting_parser` y `fit_scorer` están implementados, con la validación de citas. `cv_advisor` y `message_drafter` son del M6.
+**Estado (M6):** las cuatro capacidades están implementadas. `cv_advisor` solo propone líneas del CV para requisitos que el análisis de encaje verificó, y `message_drafter` no recibe los requisitos de la oferta y revisa cifras y nombres propios del borrador. Ver [`decisions/0002-outreach-guards.md`](decisions/0002-outreach-guards.md): la validación de citas del M5 no bastaba para texto libre.
 
-**Límite que hay que conocer:** la validación demuestra que la cita *existe* en el CV (palabras completas, sin distinguir mayúsculas ni saltos de línea), no que *respalde* el requisito. Por eso la interfaz muestra cada cita junto a su requisito. Tampoco puede citarse con un solo carácter (un lenguaje como "R" debe citarse con la línea de habilidades completa). El texto de la oferta es entrada no confiable que llega al prompt; como el modelo no tiene herramientas ni ejecuta acciones, lo peor que puede hacer una oferta maliciosa es sesgar su propio análisis, y las citas siguen verificadas contra el CV.
+**Límite que hay que conocer (M5):** la validación demuestra que la cita *existe* en el CV (palabras completas, sin distinguir mayúsculas ni saltos de línea), no que *respalde* el requisito. Por eso la interfaz muestra cada cita junto a su requisito. Tampoco puede citarse con un solo carácter (un lenguaje como "R" debe citarse con la línea de habilidades completa). El texto de la oferta es entrada no confiable que llega al prompt; como el modelo no tiene herramientas ni ejecuta acciones, lo peor que puede hacer una oferta maliciosa es sesgar su propio análisis, y las citas siguen verificadas contra el CV.
 
 **Cambio respecto al borrador:** `pypdf`, `python-docx` y `ollama` son dependencias normales y no extras, para que `uv sync` lo deje todo listo.
 

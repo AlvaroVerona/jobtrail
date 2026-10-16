@@ -8,11 +8,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
+from jobtrail.domain.followup import FollowupKind
 from jobtrail.ingestion.cv import CVError
 from jobtrail.llm.base import LLMClient, LLMError, LLMUnavailable
 from jobtrail.services.matching import CVService, MatchingService, NotFound
-from jobtrail.services.tracker import ApplicationNotFound
-from jobtrail.web.routes import SessionDep, redirect, render
+from jobtrail.services.message_drafter import MessageDrafter
+from jobtrail.services.tracker import ApplicationNotFound, TrackerService
+from jobtrail.web.routes import SessionDep, _detail, get_application, redirect, render
 
 router = APIRouter()
 
@@ -185,3 +187,51 @@ def posting_delete(request: Request, posting_id: int, session: SessionDep):
     service.delete_posting(_or_404(service.get_posting, posting_id))
     session.commit()
     return redirect("/postings")
+
+
+@router.post("/postings/{posting_id}/fit/{fit_id}/advice")
+def posting_advice(request: Request, posting_id: int, fit_id: int, session: SessionDep):
+    service = MatchingService(session, get_llm(request))
+    posting = _or_404(service.get_posting, posting_id)
+    analysis = next((f for f in posting.fits if f.id == fit_id), None)
+    if analysis is None:
+        raise HTTPException(404, "Not found")
+    try:
+        service.advise(analysis)
+        session.commit()
+    except LLMUnavailable as exc:
+        session.rollback()
+        return _posting_page(request, session, posting, error=str(exc), status_code=503)
+    except (LLMError, ValueError) as exc:
+        session.rollback()
+        return _posting_page(request, session, posting, error=str(exc), status_code=502)
+    return redirect(f"/postings/{posting_id}#fit-{fit_id}")
+
+
+# -- drafting outreach ------------------------------------------------------------------------
+
+
+@router.post("/applications/{application_id}/draft")
+def draft_message(
+    request: Request,
+    application_id: int,
+    session: SessionDep,
+    kind: Annotated[str, Form()] = "follow_up",
+    language: Annotated[str, Form()] = "en",
+    recipient: Annotated[str, Form()] = "",
+    cv_version_id: Annotated[str, Form()] = "",
+):
+    tracker = TrackerService(session)
+    application = get_application(tracker, application_id)
+    try:
+        cv_text = CVService(session).get(int(cv_version_id)).text if cv_version_id else None
+        draft = MessageDrafter(get_llm(request)).draft(
+            application, FollowupKind(kind), language=language, recipient=recipient, cv_text=cv_text
+        )
+    except LLMUnavailable as exc:
+        return _detail(request, tracker, application, error=str(exc), status_code=503)
+    except LLMError as exc:
+        return _detail(request, tracker, application, error=str(exc), status_code=502)
+    except (ValueError, NotFound) as exc:
+        return _detail(request, tracker, application, error=str(exc), status_code=400)
+    return _detail(request, tracker, application, draft=draft)

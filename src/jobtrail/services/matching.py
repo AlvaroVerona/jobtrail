@@ -10,7 +10,8 @@ from jobtrail.database.models import Application, CVVersion, FitAnalysis, Postin
 from jobtrail.domain.text_match import normalize
 from jobtrail.ingestion.cv import CVError, extract_cv_text
 from jobtrail.llm.base import LLMClient
-from jobtrail.schemas.matching import ParsedPosting
+from jobtrail.schemas.matching import FitItem, ParsedPosting
+from jobtrail.services.cv_advisor import CVAdvisor
 from jobtrail.services.fit_scorer import FitScorer
 from jobtrail.services.posting_parser import PostingParser
 from jobtrail.services.tracker import ApplicationNotFound
@@ -103,6 +104,18 @@ class MatchingService:
         self.session.add(analysis)
         self.session.flush()
         return analysis
+
+    def advise(self, analysis: FitAnalysis) -> dict:
+        """Add CV advice to an analysis (same posting and CV). Stored with the analysis."""
+        advice = CVAdvisor(self.llm).advise(
+            analysis.cv_version.text,
+            ParsedPosting.model_validate(analysis.posting.parsed),
+            [FitItem.model_validate(i) for i in analysis.detail["items"]],
+        )
+        data = advice.model_dump()
+        analysis.detail = {**analysis.detail, "advice": data}  # a new dict, so the change is saved
+        self.session.flush()
+        return data
 
     def list_postings(self) -> list[Posting]:
         query = (

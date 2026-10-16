@@ -13,11 +13,10 @@ dependencies = [
     "pydantic-settings",
     "jinja2",
     "python-multipart",
+    "ollama>=0.6.3",
+    "pypdf>=6.20.1",
+    "python-docx>=1.2.0",
 ]
-
-[project.optional-dependencies]
-llm = ["ollama"]
-cv = ["pypdf", "python-docx"]
 
 [dependency-groups]
 dev = ["pytest", "httpx", "ruff"]

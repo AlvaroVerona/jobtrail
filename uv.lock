@@ -237,20 +237,14 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "jinja2" },
+    { name = "ollama" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pypdf" },
+    { name = "python-docx" },
     { name = "python-multipart" },
     { name = "sqlalchemy" },
     { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.optional-dependencies]
-cv = [
-    { name = "pypdf" },
-    { name = "python-docx" },
-]
-llm = [
-    { name = "ollama" },
 ]
 
 [package.dev-dependencies]
@@ -264,16 +258,15 @@ dev = [
 requires-dist = [
     { name = "fastapi" },
     { name = "jinja2" },
-    { name = "ollama", marker = "extra == 'llm'" },
+    { name = "ollama", specifier = ">=0.6.3" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-settings" },
-    { name = "pypdf", marker = "extra == 'cv'" },
-    { name = "python-docx", marker = "extra == 'cv'" },
+    { name = "pypdf", specifier = ">=6.20.1" },
+    { name = "python-docx", specifier = ">=1.2.0" },
     { name = "python-multipart" },
     { name = "sqlalchemy", specifier = ">=2.0" },
     { name = "uvicorn", extras = ["standard"] },
 ]
-provides-extras = ["llm", "cv"]
 
 [package.metadata.requires-dev]
 dev = [

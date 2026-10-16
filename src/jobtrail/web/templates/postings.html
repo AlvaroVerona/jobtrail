@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Postings{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Postings <span class="count">{{ postings|length }}</span></h1>
+  <a class="btn primary" href="/postings/new">+ Add posting</a>
+</div>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Posting</th><th>Application</th><th>Added</th><th class="num">Latest fit</th></tr></thead>
+  <tbody>
+  {% for p in postings %}
+    <tr>
+      <td><a href="/postings/{{ p.id }}">{{ p.parsed.title or "(untitled posting)" }}</a>
+          <span class="muted">{{ p.parsed.company or "" }}</span></td>
+      <td>{% if p.application %}<a href="/applications/{{ p.application.id }}">{{ p.application.company.name }}</a>{% else %}<span class="muted">-</span>{% endif %}</td>
+      <td>{{ p.created_at|fmt_date }}</td>
+      <td class="num">{% if p.fits and p.fits[0].score is not none %}<strong>{{ p.fits[0].score }}</strong>/100{% else %}<span class="muted">-</span>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4" class="muted">No postings yet. Paste one to see how your CV matches it.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

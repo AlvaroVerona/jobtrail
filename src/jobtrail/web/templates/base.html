@@ -11,7 +11,7 @@
   <header class="top">
     <a class="brand" href="/board">jobtrail</a>
     <nav>
-      {% for href, label in [("/board", "Board"), ("/applications", "Applications"), ("/followups", "Follow-ups"), ("/analytics", "Analytics"), ("/settings", "Settings")] %}
+      {% for href, label in [("/board", "Board"), ("/applications", "Applications"), ("/postings", "Postings"), ("/cv", "CV"), ("/followups", "Follow-ups"), ("/analytics", "Analytics"), ("/settings", "Settings")] %}
         <a href="{{ href }}"{% if path.startswith(href) %} aria-current="page"{% endif %}>{{ label }}</a>
       {% endfor %}
     </nav>
@@ -22,6 +22,16 @@
     // htmx ignores 4xx responses by default; our forms answer 400 with the page plus an error.
     document.body.addEventListener("htmx:beforeSwap", function (event) {
       if (event.detail.xhr.status === 400) { event.detail.shouldSwap = true; event.detail.isError = false; }
+    });
+    // Slow actions (the local model can take a minute): show that something is happening.
+    document.addEventListener("submit", function (event) {
+      var button = event.target.querySelector("button[data-busy]");
+      if (button) { button.dataset.label = button.textContent; button.textContent = button.dataset.busy; button.disabled = true; }
+    });
+    window.addEventListener("pageshow", function () {
+      document.querySelectorAll("button[data-busy]").forEach(function (b) {
+        if (b.dataset.label) { b.textContent = b.dataset.label; b.disabled = false; }
+      });
     });
   </script>
 </body>

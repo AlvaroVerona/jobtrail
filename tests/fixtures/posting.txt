@@ -1,0 +1,14 @@
+Data Scientist (mid-level) - Northwind Labs
+Madrid, hybrid. Salary 45.000-55.000 EUR per year.
+
+We are looking for a data scientist to join our analytics team.
+
+What you need:
+- 3+ years of experience in data science or analytics
+- Strong Python and SQL
+- Experience with Java for our data pipelines
+- Experience deploying models with Kubernetes
+
+Nice to have:
+- Experience with Power BI dashboards
+- Knowledge of Spark

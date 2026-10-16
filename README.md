@@ -2,7 +2,7 @@
 
 A local-first job search tracker: log applications with a reliable status history, see which channel, track and CV version actually gets responses, and (optionally) get help from a local LLM. No accounts, no cloud, no paid APIs.
 
-> **Status: early development (milestone M4 done).** Tracker, CSV import, demo data, funnel analytics and the web UI work end to end. LLM features (fit scoring, CV advice, message drafts) are next. See [`docs/DESIGN.md`](docs/DESIGN.md) for scope and milestones.
+> **Status: early development (milestone M5 done).** Tracker, CSV import, analytics, the web UI, and local-LLM posting analysis and CV-fit scoring work end to end. CV tailoring advice and message drafts are next. See [`docs/DESIGN.md`](docs/DESIGN.md) for scope and milestones.
 
 ## Why
 
@@ -30,6 +30,18 @@ uv run jobtrail serve        # http://127.0.0.1:8000
 - **Settings**: manage your own channels and tracks.
 
 It works as plain HTML forms and is enhanced with [htmx](https://htmx.org) (vendored in `web/static/`, so nothing loads from a CDN). It only accepts requests addressed to localhost and refuses state changes that come from another site, so a web page you visit cannot silently edit your data.
+
+### Match a posting against your CV (local LLM)
+
+1. **CV** page: upload a PDF, DOCX, MD or TXT, or paste text. Several versions can coexist.
+2. **Postings** page: paste the text of a job posting. jobtrail extracts its requirements. It never fetches pages or scrapes sites; you decide what it reads.
+3. Pick a CV and **Analyze fit**: each requirement gets met / partial / missing, with the exact words from your CV that back it up.
+
+Sample inputs are in `src/jobtrail/demo_data/` (`sample_cv.md`, `sample_posting.txt`).
+
+How it avoids made-up experience: the model only proposes a verdict and a quote. The code then checks that the quote appears, word for word, in your CV; a claim without that evidence is downgraded to "missing" and flagged on screen. The score is plain arithmetic over the surviving verdicts (required items count double, a partial counts half), never a number the model chose. Limits: this proves the quoted words exist in your CV, not that they fit the requirement, so read each quote; and a one-letter skill such as "R" can only be cited through a longer line.
+
+All model calls go to Ollama on localhost; nothing leaves your machine. The default model is `qwen3:8b` (`JOBTRAIL_OLLAMA_MODEL` to change it); see [`docs/decisions/0001-default-model.md`](docs/decisions/0001-default-model.md) for why. `scripts/compare_models.py` reruns that comparison.
 
 ### Try it with demo data
 
@@ -59,7 +71,7 @@ uv run jobtrail import-csv applications.csv
 
 Needs a `Company` column; optional: `Role`, `Status`, `Applied date`, `Canal`/`Channel`, `Track`, `Expected salary`, `Asked salary`, `Fecha respuesta`/`Response date`, `Notes`. Headers are matched case-insensitively in English or Spanish, so a Notion database exported as CSV works as is. Dates may be `2026-05-19`, `19/05/2026` (day first) or `May 19, 2026`. Importing the same file twice is safe: rows already present (same company, role and applied date) are skipped, and bad rows are reported without stopping the import.
 
-Optional LLM features (planned, M5) use [Ollama](https://ollama.com) on localhost; everything else works without it.
+The posting/CV features use [Ollama](https://ollama.com) on localhost (`ollama pull qwen3:8b`); everything else works without it.
 
 ## Development
 

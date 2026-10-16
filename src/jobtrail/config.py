@@ -13,8 +13,10 @@ class Settings(BaseSettings):
     db_file: str = "jobtrail.db"
     host: str = "127.0.0.1"
     port: int = 8000
-    ollama_model: str = "llama3.1"
+    ollama_model: str = "qwen3:8b"
     ollama_host: str = "http://localhost:11434"
+    ollama_num_ctx: int = 8192
+    ollama_timeout: int = 300
     stale_after_days: int = 21
     min_sample: int = 20
 

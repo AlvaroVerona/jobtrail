@@ -57,6 +57,13 @@
       </li>
       {% endfor %}
     </ol>
+
+    <h2>Postings</h2>
+    {% for p in app.postings %}
+    <div><a href="/postings/{{ p.id }}">{{ p.parsed.title or "(untitled posting)" }}</a>
+      {% if p.fits and p.fits[0].score is not none %}<span class="muted">&middot; latest fit {{ p.fits[0].score }}/100</span>{% endif %}</div>
+    {% else %}<p class="muted">No posting linked yet.</p>{% endfor %}
+    <p><a class="btn" href="/postings/new?application_id={{ app.id }}">Add a posting</a></p>
   </section>
 </div>
 {% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}CV{% endblock %}
+{% block content %}
+<div class="page-head"><h1>CV versions <span class="count">{{ versions|length }}</span></h1></div>
+<p class="muted">Your CV is stored on this machine only. Postings are compared against the version you pick.</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Label</th><th>Added</th><th class="num">Characters</th><th class="num">Fit analyses</th><th></th></tr></thead>
+  <tbody>
+  {% for v in versions %}
+    <tr>
+      <td><a href="/cv/{{ v.id }}">{{ v.label }}</a></td>
+      <td>{{ v.created_at|fmt_date }}</td>
+      <td class="num">{{ v.text|length }}</td>
+      <td class="num">{{ v.fits|length }}</td>
+      <td class="num">
+        <form method="post" action="/cv/{{ v.id }}/delete" hx-boost="false" class="inline"
+              onsubmit="return confirm('Delete this CV version and its fit analyses?')">
+          <button type="submit" class="danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="muted">No CV yet. Add one below.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Add a version</h2>
+<form method="post" action="/cv" enctype="multipart/form-data" hx-boost="false" class="form card-form">
+  <label class="wide">Label <input name="label" placeholder="e.g. Data science, Oct 2026"></label>
+  <label class="wide">File (PDF, DOCX, MD or TXT, up to 5 MB) <input type="file" name="file" accept=".pdf,.docx,.md,.txt"></label>
+  <label class="wide">&hellip;or paste the text <textarea name="text" rows="8"></textarea></label>
+  <div class="actions wide"><button type="submit" class="primary">Save CV</button></div>
+</form>
+{% endblock %}

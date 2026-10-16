@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Add posting{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Add a posting</h1></div>
+<p class="muted">Paste the text of the job posting. jobtrail does not fetch pages: you stay in control of what it reads.</p>
+{% if llm_problem %}<p class="error" role="alert">The local model is not ready: {{ llm_problem }}</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="/postings" hx-boost="false" class="form card-form">
+  <label class="wide">Posting text <textarea name="raw_text" rows="14" required>{{ values.raw_text or '' }}</textarea></label>
+  <label class="wide">Link to the posting (optional) <input name="url" type="url" placeholder="https://..." value="{{ values.url or '' }}"></label>
+  <input type="hidden" name="application_id" value="{{ values.application_id or '' }}">
+  {% if values.application_id %}<p class="muted wide">This posting will be linked to <a href="/applications/{{ values.application_id }}">application #{{ values.application_id }}</a>.</p>{% endif %}
+  <div class="actions wide">
+    <button type="submit" class="primary" data-busy="Reading the posting&hellip; a local model can take a minute">Extract requirements</button>
+    <a class="btn" href="/postings">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -203,6 +203,9 @@ class TrackerService:
         return list(application.events)
 
     def delete_application(self, application: Application) -> None:
+        # A posting and its fit analyses stay useful without the application: just unlink.
+        for posting in application.postings:
+            posting.application_id = None
         self.session.delete(application)
         self.session.flush()
 

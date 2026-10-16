@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}{{ version.label }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ version.label }}</h1><div class="muted">Added {{ version.created_at|fmt_date }}</div></div></div>
+<p class="muted">This is the text jobtrail extracted and compares against. If something is missing here, the comparison cannot see it.</p>
+<pre class="doc">{{ version.text }}</pre>
+<p><a href="/cv">&larr; All versions</a></p>
+{% endblock %}

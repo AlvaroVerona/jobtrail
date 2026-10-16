@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ parsed.title or "Posting" }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ parsed.title or "(untitled posting)" }}</h1>
+    <div class="muted">
+      {{ parsed.company or "Company not stated" }}
+      {% if parsed.location %}&middot; {{ parsed.location }}{% endif %}
+      {% if parsed.remote != "unspecified" %}&middot; remote: {{ parsed.remote }}{% endif %}
+      {% if parsed.seniority != "unspecified" %}&middot; {{ parsed.seniority }}{% endif %}
+      {% if parsed.salary_text %}&middot; {{ parsed.salary_text }}{% endif %}
+    </div>
+    <div class="muted">
+      {% if posting.application %}Linked to <a href="/applications/{{ posting.application.id }}">{{ posting.application.company.name }}</a>.{% endif %}
+      {% if posting.url and posting.url.startswith(("http://", "https://")) %}<a href="{{ posting.url }}" rel="noopener noreferrer" target="_blank">Open the original posting</a>{% endif %}
+    </div>
+  </div>
+  <form method="post" action="/postings/{{ posting.id }}/delete" hx-boost="false"
+        onsubmit="return confirm('Delete this posting and its fit analyses?')">
+    <button type="submit" class="danger">Delete</button>
+  </form>
+</div>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+<h2>Requirements <span class="count">{{ parsed.requirements|length }}</span></h2>
+{% if parsed.dropped %}<p class="notice">{{ parsed.dropped }} item(s) the model proposed were left out because their text is not in the posting.</p>{% endif %}
+{% if parsed.truncated %}<p class="notice">The posting is long: only its first part was read, so later requirements may be missing.</p>{% endif %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Requirement</th><th>Kind</th><th>In the posting</th></tr></thead>
+  <tbody>
+  {% for r in parsed.requirements %}
+    <tr><td>{{ r.text }}</td><td><span class="chip">{{ "required" if r.kind == "must" else "nice to have" }}</span></td><td class="muted">&ldquo;{{ r.quote }}&rdquo;</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<details><summary class="muted">Show the posting text</summary><pre class="doc">{{ posting.raw_text }}</pre></details>
+
+<h2>How well does a CV match?</h2>
+{% if llm_problem %}<p class="error" role="alert">The local model is not ready: {{ llm_problem }}</p>{% endif %}
+{% if versions %}
+<form method="post" action="/postings/{{ posting.id }}/fit" hx-boost="false" class="inline">
+  <select name="cv_version_id" aria-label="CV version">
+    {% for v in versions %}<option value="{{ v.id }}">{{ v.label }}</option>{% endfor %}
+  </select>
+  <button type="submit" class="primary" data-busy="Comparing&hellip; a local model can take a minute">Analyze fit</button>
+</form>
+{% else %}
+<p class="muted">Add a CV first: <a href="/cv">CV versions</a>.</p>
+{% endif %}
+<p class="muted small">The score is arithmetic: required items count double, a partial match counts half. A claim only counts if the model's quote is found word for word in your CV. That proves the evidence exists, not that it fits the requirement, so read each quote.</p>
+
+{% for fit in posting.fits %}
+<section class="fit">
+  <div class="fit-head">
+    <div class="score">{% if fit.score is not none %}{{ fit.score }}<small>/100</small>{% else %}-{% endif %}</div>
+    <div>
+      <strong>{{ fit.cv_version.label }}</strong>
+      <div class="muted">{{ fit.created_at|fmt_date }} &middot; {{ fit.model }}</div>
+    </div>
+  </div>
+  {% if fit.detail.downgraded %}<p class="notice">{{ fit.detail.downgraded }} claim(s) were downgraded to missing because the quoted evidence is not in your CV.</p>{% endif %}
+  {% if fit.detail.cv_truncated %}<p class="notice">Your CV is long: only its first part was compared.</p>{% endif %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Verdict</th><th>Requirement</th><th>Evidence from your CV</th></tr></thead>
+    <tbody>
+    {% for item in fit.detail["items"] %}
+      <tr>
+        <td><span class="badge v-{{ item.status }}">{{ item.status }}</span></td>
+        <td>{{ item.text }} {% if item.kind == "must" %}<span class="chip">required</span>{% endif %}</td>
+        <td>
+          {% if item.quote %}&ldquo;{{ item.quote }}&rdquo;
+          {% elif not item.verified %}<span class="flag">the model said &ldquo;{{ item.claimed_status }}&rdquo; but its quote is not in your CV</span>
+          {% elif item.claimed_status is none %}<span class="muted">not assessed</span>
+          {% else %}<span class="muted">nothing found</span>{% endif %}
+          {% if item.reason %}<div class="muted small">{{ item.reason }}</div>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

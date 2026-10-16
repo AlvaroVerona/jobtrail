@@ -99,6 +99,12 @@ Cada una tiene un esquema Pydantic de salida, un prompt versionado y un test con
 
 **Sin LLM disponible**, estas cuatro se desactivan con un mensaje claro y el resto de la app sigue funcionando.
 
+**Estado (M5):** `posting_parser` y `fit_scorer` están implementados, con la validación de citas. `cv_advisor` y `message_drafter` son del M6.
+
+**Límite que hay que conocer:** la validación demuestra que la cita *existe* en el CV (palabras completas, sin distinguir mayúsculas ni saltos de línea), no que *respalde* el requisito. Por eso la interfaz muestra cada cita junto a su requisito. Tampoco puede citarse con un solo carácter (un lenguaje como "R" debe citarse con la línea de habilidades completa). El texto de la oferta es entrada no confiable que llega al prompt; como el modelo no tiene herramientas ni ejecuta acciones, lo peor que puede hacer una oferta maliciosa es sesgar su propio análisis, y las citas siguen verificadas contra el CV.
+
+**Cambio respecto al borrador:** `pypdf`, `python-docx` y `ollama` son dependencias normales y no extras, para que `uv sync` lo deje todo listo.
+
 ## 9. Decisión de LLM
 
 Ollama local por defecto (`llama3.1` o `qwen3:8b`), modelo configurable por `.env`. No hay backend de pago. Las tareas de arriba son extracción y comparación contra un texto dado, que es lo que un modelo local de 8B hace aceptablemente, y la validación determinista de citas cubre su punto débil (alucinar evidencia). Si en pruebas el modelo local falla de forma sistemática, se reevalúa con datos, no por defecto.
@@ -195,6 +201,6 @@ Resueltas el 2026-10-16 (se aceptaron las recomendaciones del borrador):
 3. **Idioma:** README y UI en inglés (alcance de portfolio). Los textos de UI se centralizan para poder traducirlos; este documento de diseño queda en español.
 4. **Licencia:** MIT.
 
-Abierta:
+Resuelta con datos:
 
-5. **Modelo local por defecto:** `llama3.1` provisionalmente; se decide con una prueba rápida en M5 (`llama3.1` frente a `qwen3:8b`).
+5. **Modelo local por defecto:** `qwen3:8b`, decidido el 2026-10-16 con una prueba comparativa (ver [`decisions/0001-default-model.md`](decisions/0001-default-model.md)).

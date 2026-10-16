@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    JSON,
     DateTime,
     Enum,
     ForeignKey,
@@ -101,6 +102,7 @@ class Application(Base):
         cascade="all, delete-orphan",
         order_by="StatusEvent.at, StatusEvent.id",
     )
+    postings: Mapped[list["Posting"]] = relationship(back_populates="application")
 
 
 class StatusEvent(Base):
@@ -117,3 +119,58 @@ class StatusEvent(Base):
     note: Mapped[str | None] = mapped_column(Text)
 
     application: Mapped[Application] = relationship(back_populates="events")
+
+
+class CVVersion(Base):
+    """One version of the user's CV, as extracted text. Deduplicated by content hash."""
+
+    __tablename__ = "cv_version"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    label: Mapped[str] = mapped_column(String(200))
+    content_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    fits: Mapped[list["FitAnalysis"]] = relationship(
+        back_populates="cv_version", cascade="all, delete-orphan"
+    )
+
+
+class Posting(Base):
+    """A job posting the user pasted in, with the requirements extracted from it."""
+
+    __tablename__ = "posting"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    application_id: Mapped[int | None] = mapped_column(ForeignKey("application.id"))
+    url: Mapped[str | None] = mapped_column(String(1000))
+    raw_text: Mapped[str] = mapped_column(Text)
+    parsed: Mapped[dict] = mapped_column(JSON)
+    model: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    application: Mapped[Application | None] = relationship(back_populates="postings")
+    fits: Mapped[list["FitAnalysis"]] = relationship(
+        back_populates="posting",
+        cascade="all, delete-orphan",
+        order_by="FitAnalysis.created_at.desc(), FitAnalysis.id.desc()",
+    )
+
+
+class FitAnalysis(Base):
+    """How well one CV version matches one posting. `detail` holds the per-requirement
+    verdicts, including the verbatim CV quote behind each one."""
+
+    __tablename__ = "fit_analysis"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    posting_id: Mapped[int] = mapped_column(ForeignKey("posting.id"))
+    cv_version_id: Mapped[int] = mapped_column(ForeignKey("cv_version.id"))
+    score: Mapped[int | None] = mapped_column(Integer)
+    detail: Mapped[dict] = mapped_column(JSON)
+    model: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    posting: Mapped[Posting] = relationship(back_populates="fits")
+    cv_version: Mapped[CVVersion] = relationship(back_populates="fits")
